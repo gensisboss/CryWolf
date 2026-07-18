@@ -12,10 +12,8 @@ import {
     profiler,
     ResolutionPolicy,
     screen,
-    tween,
     UITransform,
     UIOpacity,
-    Vec3,
     view,
 } from 'cc';
 import {
@@ -52,6 +50,7 @@ import {
 } from './UiFactory';
 import { ScreenName, UiScreenManager } from './UiScreenManager';
 import { SoundManager } from './SoundManager';
+import { LoadingTransition } from './LoadingTransition';
 
 const DESIGN_WIDTH = 1080;
 const DESIGN_HEIGHT = 1920;
@@ -148,6 +147,7 @@ export class GameApp extends Component {
 
     protected onDestroy(): void {
         view.off('canvas-resize', this.handleCanvasResize, this);
+        LoadingTransition.dispose(this.transitionCloud);
     }
 
     private async boot(): Promise<void> {
@@ -157,10 +157,13 @@ export class GameApp extends Component {
         this.runtimeRoot.setScale(UI_SCALE, UI_SCALE, 1);
         this.uiScreens = new UiScreenManager(this.runtimeRoot);
         this.sounds = new SoundManager(this.node);
+        if (this.transitionCloud) {
+            LoadingTransition.configure(this.transitionCloud, this.node, DESIGN_WIDTH * 1.2);
+        }
         view.on('canvas-resize', this.handleCanvasResize, this);
 
         try {
-            await this.runCloudTransition(async () => {
+            await LoadingTransition.run(async () => {
                 const [levels, guides] = await Promise.all([
                     this.repository.loadLevels(),
                     this.repository.loadGuides(),
@@ -562,7 +565,7 @@ export class GameApp extends Component {
         this.sounds.play('transition', 0.65);
         this.closeModal();
         this.closeGuide(false);
-        await this.runCloudTransition(async () => {
+        await LoadingTransition.run(async () => {
             this.currentLevel = index;
             const level = this.progressTracking ? this.levels[index] : this.playtestLevel;
             if (level) this.state = createInitialState(level);
@@ -572,31 +575,6 @@ export class GameApp extends Component {
         });
         this.isTransitioning = false;
         this.maybeShowGuide();
-    }
-
-    private async runCloudTransition<T>(operation: () => Promise<T>): Promise<T> {
-        const cloud = this.transitionCloud;
-        if (!cloud?.isValid) return operation();
-        cloud.active = true;
-        cloud.setSiblingIndex(this.node.children.length - 1);
-        cloud.setPosition(-DESIGN_WIDTH * 1.2, 0, 0);
-        await new Promise<void>((resolve) => {
-            tween(cloud)
-                .to(0.43, { position: Vec3.ZERO }, { easing: 'cubicOut' })
-                .call(() => resolve())
-                .start();
-        });
-        try {
-            return await operation();
-        } finally {
-            await new Promise<void>((resolve) => {
-                tween(cloud)
-                    .to(0.55, { position: new Vec3(DESIGN_WIDTH * 1.2, 0, 0) }, { easing: 'cubicIn' })
-                    .call(() => resolve())
-                    .start();
-            });
-            cloud.active = false;
-        }
     }
 
     private showResultModal(title: string, message: string, showNext: boolean): void {

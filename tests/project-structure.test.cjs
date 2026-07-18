@@ -162,6 +162,22 @@ test('Main scene owns runtime UI prefabs and scene-level presentation nodes', ()
     assert.match(gameApp, /showScreenPrefab\(this\.uiGamePrefab, 'UIGame'\)/);
 });
 
+test('loading transition is globally callable with queued async operations', () => {
+    const transition = fs.readFileSync(
+        path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'LoadingTransition.ts'),
+        'utf8',
+    );
+    const gameApp = fs.readFileSync(
+        path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'),
+        'utf8',
+    );
+    assert.match(transition, /public static run<T>\(operation: AsyncLoadingOperation<T>\): Promise<T>/);
+    assert.match(transition, /this\.queue\.then\(\(\) => this\.execute\(operation\)\)/);
+    assert.match(transition, /return await operation\(\)/);
+    assert.match(gameApp, /LoadingTransition\.configure\(this\.transitionCloud, this\.node/);
+    assert.ok((gameApp.match(/LoadingTransition\.run\(async \(\) =>/g) ?? []).length >= 2);
+});
+
 test('screen switches immediately deactivate the previous UI before deferred destruction', () => {
     const manager = fs.readFileSync(
         path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'UiScreenManager.ts'),
