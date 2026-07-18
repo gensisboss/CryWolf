@@ -11,5 +11,17 @@ if (!fs.existsSync(path.join(source, 'index.html'))) {
 
 fs.rmSync(destination, { recursive: true, force: true });
 fs.cpSync(source, destination, { recursive: true });
+
+const resourcesRoot = path.join(destination, 'assets', 'resources');
+const nativeSource = path.join(resourcesRoot, 'native');
+const nativeDestination = path.join(resourcesRoot, 'native-assets');
+const resourcesConfigPath = path.join(resourcesRoot, 'config.json');
+if (fs.existsSync(nativeSource)) {
+    fs.renameSync(nativeSource, nativeDestination);
+    const resourcesConfig = JSON.parse(fs.readFileSync(resourcesConfigPath, 'utf8'));
+    resourcesConfig.nativeBase = 'native-assets';
+    fs.writeFileSync(resourcesConfigPath, JSON.stringify(resourcesConfig));
+}
+
 fs.writeFileSync(path.join(destination, '.nojekyll'), '');
 console.log(`Published ${source} to ${destination}`);
