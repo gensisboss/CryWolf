@@ -5,6 +5,7 @@ const {
     chooseFollowSheep,
     clampViewport,
     isInViewport,
+    positionAlongMovement,
     viewportAround,
 } = require('../temp/domain-tests/ViewportRules.js');
 
@@ -21,6 +22,16 @@ test('six by six visibility uses absolute map coordinates', () => {
     assert.equal(isInViewport({ row: 12, col: 17 }, origin), true);
     assert.equal(isInViewport({ row: 13, col: 17 }, origin), false);
     assert.equal(isInViewport({ row: 12, col: 18 }, origin), false);
+});
+
+test('movement interpolation advances the followed sheep along its grid path', () => {
+    const movement = {
+        key: 'sheep-a', id: 10, kind: 'sheep',
+        from: { row: 8, col: 2 }, to: { row: 8, col: 10 },
+    };
+    assert.deepEqual(positionAlongMovement(movement, 0), { row: 8, col: 2 });
+    assert.deepEqual(positionAlongMovement(movement, 0.5), { row: 8, col: 6 });
+    assert.deepEqual(positionAlongMovement(movement, 1), { row: 8, col: 10 });
 });
 
 test('auto follow chooses the surviving sheep that moved furthest', () => {

@@ -1,4 +1,4 @@
-import { Entity, GameState, GridPosition, TurnResolution } from './GameTypes';
+import { Entity, EntityMovement, GameState, GridPosition, TurnResolution } from './GameTypes';
 
 export const VIEWPORT_SIZE = 6;
 
@@ -26,6 +26,14 @@ export function isInViewport(position: GridPosition, origin: ViewportOrigin): bo
         && position.row < origin.row + VIEWPORT_SIZE
         && position.col >= origin.col
         && position.col < origin.col + VIEWPORT_SIZE;
+}
+
+export function positionAlongMovement(movement: EntityMovement, progress: number): GridPosition {
+    const value = Math.max(0, Math.min(1, progress));
+    return {
+        row: Math.round(movement.from.row + (movement.to.row - movement.from.row) * value),
+        col: Math.round(movement.from.col + (movement.to.col - movement.from.col) * value),
+    };
 }
 
 export function chooseFollowSheep(state: GameState, resolution?: TurnResolution): Entity | null {

@@ -14,7 +14,7 @@ import { Direction, Entity, GameState, TurnResolution } from '../domain/GameType
 import { AssetCatalog } from './AssetCatalog';
 import { createCoverSprite, createPanel, createSprite, createUiNode, drawPanel } from '../ui/UiFactory';
 import { SlideMinimapView } from './SlideMinimapView';
-import { chooseFollowSheep, clampViewport, isInViewport, viewportAround, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
+import { chooseFollowSheep, clampViewport, isInViewport, positionAlongMovement, viewportAround, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
 
 interface BoardViewOptions {
     width: number;
@@ -159,12 +159,16 @@ export class BoardView {
     public async animateTurn(resolution: TurnResolution): Promise<void> {
         if (!this.state) return;
         const state = this.state;
-        const phaseOne = resolution.movements.flatMap((movement) => {
-            const node = this.actorNodes.get(movement.key);
-            if (!node) return [];
-            return [this.tweenPosition(node, this.positionFor(movement.to.row, movement.to.col, state), 0.35)];
-        });
-        await Promise.all(phaseOne);
+        if (state.rows > VIEWPORT_SIZE || state.cols > VIEWPORT_SIZE) {
+            await this.animateLargeMapTurn(state, resolution);
+        } else {
+            const phaseOne = resolution.movements.flatMap((movement) => {
+                const node = this.actorNodes.get(movement.key);
+                if (!node) return [];
+                return [this.tweenPosition(node, this.positionFor(movement.to.row, movement.to.col, state), 0.35)];
+            });
+            await Promise.all(phaseOne);
+        }
 
         const effects: Array<Promise<void>> = [];
         const disappearing = new Set([
@@ -184,6 +188,43 @@ export class BoardView {
             if (sheep) effects.push(this.tweenDisappear(sheep, 0.22));
         });
         await Promise.all(effects);
+    }
+
+    private async animateLargeMapTurn(state: GameState, resolution: TurnResolution): Promise<void> {
+        const sheepMovements = resolution.movements.filter((movement) => movement.kind === 'sheep');
+        const distance = (movement: TurnResolution['movements'][number]): number => (
+            Math.abs(movement.to.row - movement.from.row) + Math.abs(movement.to.col - movement.from.col)
+        );
+        const followed = [...sheepMovements].sort((left, right) => distance(right) - distance(left))[0];
+        const steps = followed ? distance(followed) : 0;
+        if (!followed || steps === 0) {
+            await Promise.all(resolution.movements.flatMap((movement) => {
+                const node = this.actorNodes.get(movement.key);
+                return node ? [this.tweenPosition(node, this.positionFor(movement.to.row, movement.to.col, state), 0.35)] : [];
+            }));
+            return;
+        }
+
+        const movementByKey = new Map(resolution.movements.map((movement) => [movement.key, movement]));
+        const moveEntities = (entities: Entity[], progress: number): Entity[] => entities.map((entity) => {
+            const movement = movementByKey.get(entity.key);
+            return movement ? { ...entity, ...positionAlongMovement(movement, progress) } : { ...entity };
+        });
+        for (let step = 1; step <= steps; step += 1) {
+            const progress = step / steps;
+            const followedPosition = positionAlongMovement(followed, progress);
+            this.viewport = viewportAround(followedPosition, state.rows, state.cols);
+            this.viewportInitialized = true;
+            this.render({
+                ...state,
+                sheep: moveEntities(state.sheep, progress),
+                wolves: moveEntities(state.wolves, progress),
+                obstacles: moveEntities(state.obstacles, progress),
+            });
+            await new Promise<void>((resolve) => {
+                tween(this.frame).delay(0.35 / steps).call(() => resolve()).start();
+            });
+        }
     }
 
     public async animateRestore(target: GameState): Promise<void> {
