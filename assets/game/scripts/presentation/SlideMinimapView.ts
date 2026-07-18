@@ -8,12 +8,18 @@ export class SlideMinimapView {
 
     public constructor(
         private readonly node: Node,
-        private readonly state: GameState,
+        private state: GameState,
         private origin: ViewportOrigin,
         private readonly onViewportChange: (origin: ViewportOrigin) => void,
     ) {
         this.graphics = node.addComponent(Graphics);
         this.bindInput();
+        this.draw();
+    }
+
+    public update(state: GameState, origin: ViewportOrigin): void {
+        this.state = state;
+        this.origin = origin;
         this.draw();
     }
 

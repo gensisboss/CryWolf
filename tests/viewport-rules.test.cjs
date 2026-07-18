@@ -7,6 +7,7 @@ const {
     isInViewport,
     positionAlongMovement,
     viewportAround,
+    viewportAroundContinuous,
 } = require('../temp/domain-tests/ViewportRules.js');
 
 test('viewport is always clamped to a six by six window inside the map', () => {
@@ -14,6 +15,7 @@ test('viewport is always clamped to a six by six window inside the map', () => {
     assert.deepEqual(clampViewport({ row: 99, col: 99 }, 20, 30), { row: 14, col: 24 });
     assert.deepEqual(viewportAround({ row: 10, col: 15 }, 20, 30), { row: 7, col: 12 });
     assert.deepEqual(viewportAround({ row: 19, col: 29 }, 20, 30), { row: 14, col: 24 });
+    assert.deepEqual(viewportAroundContinuous({ row: 10.5, col: 15.25 }, 20, 30), { row: 7.5, col: 12.25 });
 });
 
 test('six by six visibility uses absolute map coordinates', () => {
@@ -31,6 +33,7 @@ test('movement interpolation advances the followed sheep along its grid path', (
     };
     assert.deepEqual(positionAlongMovement(movement, 0), { row: 8, col: 2 });
     assert.deepEqual(positionAlongMovement(movement, 0.5), { row: 8, col: 6 });
+    assert.deepEqual(positionAlongMovement(movement, 0.25), { row: 8, col: 4 });
     assert.deepEqual(positionAlongMovement(movement, 1), { row: 8, col: 10 });
 });
 

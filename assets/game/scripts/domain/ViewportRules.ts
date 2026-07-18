@@ -21,6 +21,13 @@ export function viewportAround(position: GridPosition, rows: number, cols: numbe
     }, rows, cols);
 }
 
+export function viewportAroundContinuous(position: GridPosition, rows: number, cols: number): ViewportOrigin {
+    return {
+        row: Math.max(0, Math.min(Math.max(0, rows - VIEWPORT_SIZE), position.row - Math.floor(VIEWPORT_SIZE / 2))),
+        col: Math.max(0, Math.min(Math.max(0, cols - VIEWPORT_SIZE), position.col - Math.floor(VIEWPORT_SIZE / 2))),
+    };
+}
+
 export function isInViewport(position: GridPosition, origin: ViewportOrigin): boolean {
     return position.row >= origin.row
         && position.row < origin.row + VIEWPORT_SIZE
@@ -31,8 +38,8 @@ export function isInViewport(position: GridPosition, origin: ViewportOrigin): bo
 export function positionAlongMovement(movement: EntityMovement, progress: number): GridPosition {
     const value = Math.max(0, Math.min(1, progress));
     return {
-        row: Math.round(movement.from.row + (movement.to.row - movement.from.row) * value),
-        col: Math.round(movement.from.col + (movement.to.col - movement.from.col) * value),
+        row: movement.from.row + (movement.to.row - movement.from.row) * value,
+        col: movement.from.col + (movement.to.col - movement.from.col) * value,
     };
 }
 

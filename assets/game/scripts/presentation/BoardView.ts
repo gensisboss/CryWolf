@@ -14,7 +14,7 @@ import { Direction, Entity, GameState, TurnResolution } from '../domain/GameType
 import { AssetCatalog } from './AssetCatalog';
 import { createCoverSprite, createPanel, createSprite, createUiNode, drawPanel } from '../ui/UiFactory';
 import { SlideMinimapView } from './SlideMinimapView';
-import { chooseFollowSheep, clampViewport, isInViewport, positionAlongMovement, viewportAround, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
+import { chooseFollowSheep, clampViewport, isInViewport, positionAlongMovement, viewportAround, viewportAroundContinuous, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
 
 interface BoardViewOptions {
     width: number;
@@ -33,7 +33,9 @@ export class BoardView {
     private cellSize = 44;
     private gap = 3;
     private viewport: ViewportOrigin = { row: 0, col: 0 };
+    private visualViewport: ViewportOrigin = { row: 0, col: 0 };
     private viewportInitialized = false;
+    private minimap: SlideMinimapView | null = null;
 
     public constructor(
         parent: Node,
@@ -55,7 +57,7 @@ export class BoardView {
         this.bindInput();
     }
 
-    public render(state: GameState): void {
+    public render(state: GameState, visualOrigin?: ViewportOrigin): void {
         this.state = state;
         this.content.removeAllChildren();
         this.actorNodes.clear();
@@ -67,6 +69,7 @@ export class BoardView {
             this.viewportInitialized = true;
         }
         this.viewport = clampViewport(this.viewport, state.rows, state.cols);
+        this.visualViewport = visualOrigin ?? this.viewport;
 
         const visibleRows = Math.min(VIEWPORT_SIZE, state.rows);
         const visibleCols = Math.min(VIEWPORT_SIZE, state.cols);
@@ -137,9 +140,11 @@ export class BoardView {
             oldMinimap.active = false;
             oldMinimap.destroy();
         }
+        this.minimap = null;
         if (state.rows > VIEWPORT_SIZE || state.cols > VIEWPORT_SIZE) {
-            SlideMinimapView.create(this.frame, state, this.viewport, (origin) => {
+            this.minimap = SlideMinimapView.create(this.frame, state, this.visualViewport, (origin) => {
                 this.viewport = origin;
+                this.visualViewport = origin;
                 if (this.state) this.render(this.state);
             });
         }
@@ -147,12 +152,16 @@ export class BoardView {
 
     public followSheep(state: GameState, resolution?: TurnResolution): void {
         const sheep = chooseFollowSheep(state, resolution);
-        if (sheep) this.viewport = viewportAround(sheep, state.rows, state.cols);
+        if (sheep) {
+            this.viewport = viewportAround(sheep, state.rows, state.cols);
+            this.visualViewport = this.viewport;
+        }
         this.viewportInitialized = true;
     }
 
     public focusCell(row: number, col: number, state: GameState): void {
         this.viewport = viewportAround({ row, col }, state.rows, state.cols);
+        this.visualViewport = this.viewport;
         this.viewportInitialized = true;
     }
 
@@ -196,8 +205,7 @@ export class BoardView {
             Math.abs(movement.to.row - movement.from.row) + Math.abs(movement.to.col - movement.from.col)
         );
         const followed = [...sheepMovements].sort((left, right) => distance(right) - distance(left))[0];
-        const steps = followed ? distance(followed) : 0;
-        if (!followed || steps === 0) {
+        if (!followed || distance(followed) === 0) {
             await Promise.all(resolution.movements.flatMap((movement) => {
                 const node = this.actorNodes.get(movement.key);
                 return node ? [this.tweenPosition(node, this.positionFor(movement.to.row, movement.to.col, state), 0.35)] : [];
@@ -210,21 +218,44 @@ export class BoardView {
             const movement = movementByKey.get(entity.key);
             return movement ? { ...entity, ...positionAlongMovement(movement, progress) } : { ...entity };
         });
-        for (let step = 1; step <= steps; step += 1) {
-            const progress = step / steps;
+        const update = (progress: number): void => {
             const followedPosition = positionAlongMovement(followed, progress);
-            this.viewport = viewportAround(followedPosition, state.rows, state.cols);
-            this.viewportInitialized = true;
-            this.render({
+            const visualOrigin = viewportAroundContinuous(followedPosition, state.rows, state.cols);
+            const viewport = clampViewport(visualOrigin, state.rows, state.cols);
+            const intermediate = {
                 ...state,
                 sheep: moveEntities(state.sheep, progress),
                 wolves: moveEntities(state.wolves, progress),
                 obstacles: moveEntities(state.obstacles, progress),
-            });
-            await new Promise<void>((resolve) => {
-                tween(this.frame).delay(0.35 / steps).call(() => resolve()).start();
-            });
+            };
+            const crossedCell = viewport.row !== this.viewport.row || viewport.col !== this.viewport.col;
+            this.viewport = viewport;
+            this.visualViewport = visualOrigin;
+            this.viewportInitialized = true;
+            if (crossedCell) this.render(intermediate, visualOrigin);
+            else this.updateRenderedPositions(intermediate);
+        };
+        await new Promise<void>((resolve) => {
+            const driver = { progress: 0 };
+            tween(driver)
+                .to(0.35, { progress: 1 }, {
+                    easing: 'cubicOut',
+                    onUpdate: (target) => update(target?.progress ?? 0),
+                })
+                .call(() => resolve())
+                .start();
+        });
+    }
+
+    private updateRenderedPositions(state: GameState): void {
+        this.cellNodes.forEach((node, key) => {
+            const [row, col] = key.split(',').map(Number);
+            node.setPosition(this.positionFor(row, col, state));
+        });
+        for (const entity of [...state.obstacles, ...state.sheep, ...state.wolves]) {
+            this.actorNodes.get(entity.key)?.setPosition(this.positionFor(entity.row, entity.col, state));
         }
+        this.minimap?.update(state, this.visualViewport);
     }
 
     public async animateRestore(target: GameState): Promise<void> {
@@ -306,8 +337,8 @@ export class BoardView {
         const visibleRows = Math.min(VIEWPORT_SIZE, state.rows);
         const visibleCols = Math.min(VIEWPORT_SIZE, state.cols);
         return new Vec3(
-            (col - this.viewport.col - (visibleCols - 1) / 2) * stride,
-            ((visibleRows - 1) / 2 - (row - this.viewport.row)) * stride,
+            (col - this.visualViewport.col - (visibleCols - 1) / 2) * stride,
+            ((visibleRows - 1) / 2 - (row - this.visualViewport.row)) * stride,
             0,
         );
     }
