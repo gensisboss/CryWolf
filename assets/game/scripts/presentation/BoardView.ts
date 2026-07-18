@@ -315,10 +315,7 @@ export class BoardView {
         this.frame.on(Node.EventType.TOUCH_START, (event: EventTouch) => {
             this.touchStart = event.getUILocation();
         });
-        this.frame.on(Node.EventType.TOUCH_CANCEL, () => {
-            this.touchStart = null;
-        });
-        this.frame.on(Node.EventType.TOUCH_END, (event: EventTouch) => {
+        const finishSwipe = (event: EventTouch): void => {
             if (!this.touchStart) return;
             const end = event.getUILocation();
             const dx = end.x - this.touchStart.x;
@@ -329,7 +326,9 @@ export class BoardView {
                 ? (dx > 0 ? 'right' : 'left')
                 : (dy > 0 ? 'up' : 'down');
             this.options.onSwipe?.(direction);
-        });
+        };
+        this.frame.on(Node.EventType.TOUCH_END, finishSwipe);
+        this.frame.on(Node.EventType.TOUCH_CANCEL, finishSwipe);
     }
 
     private positionFor(row: number, col: number, state: GameState): Vec3 {

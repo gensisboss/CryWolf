@@ -308,3 +308,13 @@ test('BoardView virtualizes large maps and enables the draggable minimap', () =>
     assert.match(boardView, /state\.rows > VIEWPORT_SIZE \|\| state\.cols > VIEWPORT_SIZE/);
     assert.match(minimap, /Node\.EventType\.TOUCH_MOVE/);
 });
+
+test('board swipe completion handles touches released outside the screen', () => {
+    const boardView = fs.readFileSync(
+        path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'BoardView.ts'),
+        'utf8',
+    );
+    assert.match(boardView, /const finishSwipe = \(event: EventTouch\): void =>/);
+    assert.match(boardView, /TOUCH_END, finishSwipe/);
+    assert.match(boardView, /TOUCH_CANCEL, finishSwipe/);
+});
