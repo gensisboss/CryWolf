@@ -178,6 +178,21 @@ test('loading transition is globally callable with queued async operations', () 
     assert.ok((gameApp.match(/LoadingTransition\.run\(async \(\) =>/g) ?? []).length >= 2);
 });
 
+test('every level entry uses the cloud transition and only movable obstacles have a cell background', () => {
+    const gameApp = fs.readFileSync(
+        path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'),
+        'utf8',
+    );
+    const boardView = fs.readFileSync(
+        path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'BoardView.ts'),
+        'utf8',
+    );
+    assert.match(gameApp, /private async resetLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
+    assert.match(gameApp, /private async startMainGame\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
+    assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(0\)/);
+    assert.match(boardView, /obstacle && state\.level\.moveObstacle === 1/);
+});
+
 test('screen switches immediately deactivate the previous UI before deferred destruction', () => {
     const manager = fs.readFileSync(
         path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'UiScreenManager.ts'),

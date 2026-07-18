@@ -290,8 +290,6 @@ export class GameApp extends Component {
         this.progressTracking = true;
         this.playtestLevel = null;
         this.currentLevel = Math.min(this.currentLevel, this.levels.length - 1);
-        this.state = createInitialState(this.levels[this.currentLevel]);
-        this.buildGameScreen();
         await this.transitionToLevel(this.currentLevel);
     }
 
@@ -302,7 +300,7 @@ export class GameApp extends Component {
         const bottom = this.requireNode(content, 'BottomContainer');
 
         bindButton(this.requireNode(top, 'HomeButton'), () => this.goHome());
-        bindButton(this.requireNode(top, 'ReplayButton'), () => this.resetLevel());
+        bindButton(this.requireNode(top, 'ReplayButton'), () => void this.resetLevel());
         const previous = this.requireNode(top, 'PreviousButton');
         const next = this.requireNode(top, 'NextButton');
         const undo = this.requireNode(top, 'UndoButton');
@@ -369,7 +367,7 @@ export class GameApp extends Component {
             40,
             topWidth / 2 - 24,
             0,
-            () => this.resetLevel(),
+            () => void this.resetLevel(),
         );
 
         if (this.progressTracking) {
@@ -526,15 +524,11 @@ export class GameApp extends Component {
         this.store.saveMaxUnlockedLevel(this.maxUnlockedLevel);
     }
 
-    private resetLevel(): void {
+    private async resetLevel(): Promise<void> {
         if (this.isMoving || this.isTransitioning) return;
-        this.closeModal();
         const level = this.progressTracking ? this.levels[this.currentLevel] : this.playtestLevel;
         if (!level) return;
-        this.state = createInitialState(level);
-        this.history = [];
-        this.buildGameScreen();
-        this.maybeShowGuide();
+        await this.transitionToLevel(this.currentLevel);
     }
 
     private async goPreviousLevel(): Promise<void> {
@@ -565,15 +559,18 @@ export class GameApp extends Component {
         this.sounds.play('transition', 0.65);
         this.closeModal();
         this.closeGuide(false);
-        await LoadingTransition.run(async () => {
-            this.currentLevel = index;
-            const level = this.progressTracking ? this.levels[index] : this.playtestLevel;
-            if (level) this.state = createInitialState(level);
-            this.history = [];
-            this.buildGameScreen();
-            await new Promise<void>((resolve) => this.scheduleOnce(resolve));
-        });
-        this.isTransitioning = false;
+        try {
+            await LoadingTransition.run(async () => {
+                this.currentLevel = index;
+                const level = this.progressTracking ? this.levels[index] : this.playtestLevel;
+                if (level) this.state = createInitialState(level);
+                this.history = [];
+                this.buildGameScreen();
+                await new Promise<void>((resolve) => this.scheduleOnce(resolve));
+            });
+        } finally {
+            this.isTransitioning = false;
+        }
         this.maybeShowGuide();
     }
 
@@ -588,7 +585,7 @@ export class GameApp extends Component {
         this.requireNode(panel, 'ModalTitle').getComponent(Label)!.string = title;
         this.requireNode(panel, 'ModalMessage').getComponent(Label)!.string = message;
         bindButton(this.requireNode(panel, 'ModalHome'), () => this.goHome());
-        bindButton(this.requireNode(panel, 'ModalReplay'), () => this.resetLevel());
+        bindButton(this.requireNode(panel, 'ModalReplay'), () => void this.resetLevel());
         const next = this.requireNode(panel, 'ModalNext');
         next.active = showNext;
         if (showNext) bindButton(next, () => void this.goNextLevel());
@@ -611,7 +608,7 @@ export class GameApp extends Component {
         createLabel(panel, 'ModalMessage', message, 284, 66, 16, new Color(94, 64, 29), 0, -34);
         const actionsY = -99;
         createSpriteButton(panel, 'ModalHome', this.assets.get('homeButton'), 48, 50, showNext ? -80 : -35, actionsY, () => this.goHome());
-        createSpriteButton(panel, 'ModalReplay', this.assets.get('replayButton'), 48, 50, showNext ? -18 : 35, actionsY, () => this.resetLevel());
+        createSpriteButton(panel, 'ModalReplay', this.assets.get('replayButton'), 48, 50, showNext ? -18 : 35, actionsY, () => void this.resetLevel());
         if (showNext) {
             createSpriteButton(panel, 'ModalNext', this.assets.get('nextButton'), 86, 50, 72, actionsY, () => void this.goNextLevel());
         }
@@ -981,8 +978,6 @@ export class GameApp extends Component {
         this.progressTracking = false;
         this.currentLevel = 0;
         this.history = [];
-        this.state = createInitialState(this.playtestLevel);
-        this.buildGameScreen();
         await this.transitionToLevel(0);
     }
 

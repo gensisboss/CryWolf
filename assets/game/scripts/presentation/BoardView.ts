@@ -99,7 +99,7 @@ export class BoardView {
                 const trap = trapByCell.get(key);
                 const village = villageByCell.get(key);
                 const position = this.positionFor(row, col, state);
-                const fill = obstacle
+                const fill = obstacle && state.level.moveObstacle === 1
                     ? new Color(106, 82, 48, 245)
                     : trap
                         ? new Color(153, 70, 57, 245)
