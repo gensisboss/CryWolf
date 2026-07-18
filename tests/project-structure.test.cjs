@@ -308,6 +308,7 @@ test('BoardView builds the full bounded map and enables the draggable minimap', 
     assert.doesNotMatch(boardView, /this\.render\(intermediate/);
     assert.match(boardView, /this\.boardPanel\.setPosition\(-this\.visualViewport\.col \* stride/);
     assert.match(boardView, /this\.content\.getComponent\(UITransform\)!\.setContentSize\(boardWidth, boardHeight\)/);
+    assert.match(boardView, /border\.setSiblingIndex\(this\.content\.getSiblingIndex\(\) \+ 1\)/);
     assert.match(boardView, /state\.rows > VIEWPORT_SIZE \|\| state\.cols > VIEWPORT_SIZE/);
     assert.match(minimap, /Node\.EventType\.TOUCH_MOVE/);
 });

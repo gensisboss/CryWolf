@@ -55,6 +55,7 @@ export class BoardView {
         this.content = createUiNode(this.frame, 'BoardWorldRoot', options.width - 16, options.height - 16);
         const mask = this.content.addComponent(Mask);
         mask.type = Mask.Type.GRAPHICS_RECT;
+        border.setSiblingIndex(this.content.getSiblingIndex() + 1);
         this.bindInput();
     }
 
