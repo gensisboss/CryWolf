@@ -1,0 +1,13 @@
+{
+  "name": "CryWolf",
+  "uuid": "efb33637-5df0-4b97-9865-210105b16cad",
+  "scripts": {
+    "test": "node tools/cocos-tsc.cjs -p tests/tsconfig.json && node --test tests/*.test.cjs",
+    "typecheck": "node tools/cocos-tsc.cjs --noEmit -p tsconfig.json",
+    "preview:web": "node tools/serve-build.cjs",
+    "publish:web": "node tools/publish-web.cjs"
+  },
+  "creator": {
+    "version": "3.8.4"
+  }
+}

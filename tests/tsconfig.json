@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "rootDir": "../assets/game/scripts/domain",
+    "outDir": "../temp/domain-tests",
+    "skipLibCheck": true
+  },
+  "include": [
+    "../assets/game/scripts/domain/**/*.ts"
+  ]
+}
