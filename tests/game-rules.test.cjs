@@ -37,8 +37,27 @@ test('fixed obstacles block movement and moving-obstacle levels move the obstacl
 
     assert.equal(fixed.state.sheep[0].col, 1);
     assert.equal(fixed.state.obstacles[0].col, 2);
-    assert.equal(moving.state.sheep[0].col, 1);
+    assert.equal(moving.state.sheep[0].col, 2);
     assert.equal(moving.state.obstacles[0].col, 3);
+});
+
+test('characters use a moving obstacle landing cell instead of its stale source cell', () => {
+    const result = resolveTurn(createInitialState(level([
+        [10, 0, 30, 0, 0],
+        [20, 0, 30, 0, 0],
+    ], 1, 1)), 'right', () => 0);
+
+    assert.deepEqual(result.state.obstacles.map(({ row, col }) => ({ row, col })), [
+        { row: 0, col: 4 },
+        { row: 1, col: 4 },
+    ]);
+    assert.deepEqual(
+        result.movements.filter(({ kind }) => kind !== 'obstacle').map(({ kind, to }) => ({ kind, ...to })),
+        [
+            { kind: 'sheep', row: 0, col: 3 },
+            { kind: 'wolf', row: 1, col: 3 },
+        ],
+    );
 });
 
 test('traps consume sheep and wolves and are removed after landing', () => {

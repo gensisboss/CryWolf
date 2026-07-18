@@ -5,26 +5,43 @@ const path = require('node:path');
 
 const { createInitialState, resolveTurn } = require('../temp/domain-tests/GameRules.js');
 
-const solutions = [
-    'up,left,left,down', 'left,down', 'left,up,right', 'up,up,left', 'left,up',
-    'up,right,down,left', 'left,up,right,down', 'down,left', 'down,up,left', 'left,down,right',
-    'left,right,down,right', 'up,right,right,down', 'right,up,up,left', 'down,left,right,down,left', 'down,down,left,up,left,right',
-    'up,up,right,right,up', 'right,up,left,right,up,left', 'right,up,right,down', 'left,up,up,left', 'left,down,right,down,right',
-    'right,down,down,right,up,left', 'left,up,right,left,down', 'right,left,up,left,up,right', 'left,up,up,right,down,left', 'up,down,right,up,up',
-    'left,down,right,left,up', 'up,right,right,up,down', 'up,right,left,down,right,up', 'up,left,down,left,up,right,down', 'down,up,down,right,right,up',
-    'down,left,up,left,down,left', 'down,left,up,right,up,right,down,left,up,left,up', 'up,left,down,down,left,right', 'left,up,down,right,right,down', 'down,up,left,right,down,left,up,right',
-    'up,left,up,right,down,right,up', 'up,right,down,up,left,down,left', 'right,up,up,left,down,left,up', 'left,left,down,down,up,right,down,left', 'up,right,up,up,down,left,down',
-].map((value) => value.split(','));
+const directions = ['up', 'down', 'left', 'right'];
+
+function stateKey(state) {
+    const entities = (items) => items.map((item) => `${item.key}:${item.row},${item.col}`).sort().join('|');
+    return [
+        state.escapedSheep,
+        entities(state.sheep),
+        entities(state.wolves),
+        entities(state.obstacles),
+        state.traps.map((item) => `${item.row},${item.col}`).sort().join('|'),
+    ].join(';');
+}
+
+function solve(level, maxDepth = 20, maxStates = 200000) {
+    const initial = createInitialState(level);
+    const queue = [{ state: initial, depth: 0 }];
+    const seen = new Set([stateKey(initial)]);
+    for (let cursor = 0; cursor < queue.length && cursor < maxStates; cursor += 1) {
+        const current = queue[cursor];
+        if (current.depth >= maxDepth) continue;
+        for (const direction of directions) {
+            const state = resolveTurn(current.state, direction, () => 0).state;
+            if (state.status === 'win') return true;
+            if (state.status === 'lose') continue;
+            const key = stateKey(state);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            queue.push({ state, depth: current.depth + 1 });
+        }
+    }
+    return false;
+}
 
 test('all generated campaign levels replay to a win', () => {
     const file = path.join(__dirname, '..', 'assets', 'resources', 'data', 'levels.json');
     const levels = JSON.parse(fs.readFileSync(file, 'utf8')).levels;
-    assert.equal(solutions.length, 40);
-    solutions.forEach((directions, index) => {
-        let state = createInitialState(levels[index + 10]);
-        directions.forEach((direction) => {
-            state = resolveTurn(state, direction, () => 0).state;
-        });
-        assert.equal(state.status, 'win', `level ${index + 11} should be solvable`);
+    levels.slice(10).forEach((level, index) => {
+        assert.equal(solve(level), true, `level ${index + 11} should be solvable`);
     });
 });

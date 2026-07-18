@@ -149,6 +149,9 @@ export function resolveTurn(
         const from = { row: entity.row, col: entity.col };
         let row = entity.row;
         let col = entity.col;
+        if (entity.kind === 'obstacle' && source.level.moveObstacle === 1) {
+            obstacleCells.delete(positionKey(row, col));
+        }
 
         while (true) {
             const nextRow = row + dr;
@@ -171,6 +174,9 @@ export function resolveTurn(
 
         entity.row = row;
         entity.col = col;
+        if (entity.kind === 'obstacle') {
+            obstacleCells.add(positionKey(row, col));
+        }
         occupied.add(positionKey(row, col));
         movements.push({
             key: entity.key,
