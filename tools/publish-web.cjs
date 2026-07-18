@@ -24,4 +24,5 @@ if (fs.existsSync(nativeSource)) {
 }
 
 fs.writeFileSync(path.join(destination, '.nojekyll'), '');
+fs.writeFileSync(path.join(destination, 'CNAME'), 'game.gongganghao.com\n');
 console.log(`Published ${source} to ${destination}`);
