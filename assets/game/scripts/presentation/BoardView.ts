@@ -85,6 +85,7 @@ export class BoardView {
 
         const boardWidth = visibleCols * this.cellSize + (visibleCols - 1) * this.gap + 16;
         const boardHeight = visibleRows * this.cellSize + (visibleRows - 1) * this.gap + 16;
+        this.content.getComponent(UITransform)!.setContentSize(boardWidth, boardHeight);
         const boardPanel = createPanel(this.content, 'BoardPanel', boardWidth, boardHeight, 0, 0, {
             fill: new Color(67, 101, 57, 230),
             stroke: new Color(57, 51, 25, 235),
