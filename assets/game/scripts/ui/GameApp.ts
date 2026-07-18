@@ -92,9 +92,9 @@ const DIRECTION_LABELS: Record<Direction, string> = {
 export class GameApp extends Component {
     @property(Prefab) private uiMainPrefab: Prefab | null = null;
     @property(Prefab) private uiGamePrefab: Prefab | null = null;
-    @property(Prefab) private uiLoadingPrefab: Prefab | null = null;
     @property(Prefab) private uiGuidePrefab: Prefab | null = null;
     @property(Prefab) private uiEditorPrefab: Prefab | null = null;
+    @property(Node) private transitionCloud: Node | null = null;
 
     private readonly assets = new AssetCatalog();
     private readonly repository = new GameDataRepository();
@@ -106,7 +106,6 @@ export class GameApp extends Component {
     private screenRoot: Node | null = null;
     private modalRoot: Node | null = null;
     private guideRoot: Node | null = null;
-    private loadingRoot: Node | null = null;
     private screenWidth = 430;
     private screenHeight = 760;
     private frameWidth = 406;
@@ -161,22 +160,23 @@ export class GameApp extends Component {
         view.on('canvas-resize', this.handleCanvasResize, this);
 
         try {
-            this.showLoadingScreen();
-            const [levels, guides] = await Promise.all([
-                this.repository.loadLevels(),
-                this.repository.loadGuides(),
-                this.assets.load(),
-                this.sounds.load(),
-            ]).then(([loadedLevels, loadedGuides]) => [loadedLevels, loadedGuides] as const);
-            this.levels = levels;
-            this.guides = guides;
-            if (this.levels.length === 0) throw new Error('No playable levels found');
+            await this.runCloudTransition(async () => {
+                const [levels, guides] = await Promise.all([
+                    this.repository.loadLevels(),
+                    this.repository.loadGuides(),
+                    this.assets.load(),
+                    this.sounds.load(),
+                ]).then(([loadedLevels, loadedGuides]) => [loadedLevels, loadedGuides] as const);
+                this.levels = levels;
+                this.guides = guides;
+                if (this.levels.length === 0) throw new Error('No playable levels found');
 
-            this.maxUnlockedLevel = Math.min(this.store.loadMaxUnlockedLevel(), this.levels.length - 1);
-            this.seenGuideLevels = this.store.loadSeenGuideLevels();
-            this.state = createInitialState(this.levels[0]);
-            this.loadSavedEditorLevel();
-            this.showStartScreen();
+                this.maxUnlockedLevel = Math.min(this.store.loadMaxUnlockedLevel(), this.levels.length - 1);
+                this.seenGuideLevels = this.store.loadSeenGuideLevels();
+                this.state = createInitialState(this.levels[0]);
+                this.loadSavedEditorLevel();
+                this.showStartScreen();
+            });
         } catch (error) {
             this.showBootError(error instanceof Error ? error.message : String(error));
         }
@@ -203,8 +203,6 @@ export class GameApp extends Component {
         this.runtimeRoot.setScale(UI_SCALE, UI_SCALE, 1);
         this.closeModal();
         this.closeGuide(false);
-        this.loadingRoot?.destroy();
-        this.loadingRoot = null;
 
         if (activeScreen === 'UIGame' && this.state) {
             this.buildGameScreen();
@@ -212,13 +210,7 @@ export class GameApp extends Component {
             this.showEditorScreen();
         } else if (activeScreen === 'UIMain') {
             this.showStartScreen();
-        } else {
-            this.showLoadingScreen();
         }
-    }
-
-    private showLoadingScreen(): void {
-        this.showScreenPrefab(this.uiLoadingPrefab, 'UILoading');
     }
 
     private loadSavedEditorLevel(): void {
@@ -264,7 +256,13 @@ export class GameApp extends Component {
         return node;
     }
 
-    private beginScreen(name: Exclude<ScreenName, 'UILoading'>): Node {
+    private requireLabel(node: Node): Label {
+        const label = node.getComponent(Label) ?? node.getChildByName('Label')?.getComponent(Label);
+        if (!label) throw new Error(`Prefab node ${node.name} is missing Label`);
+        return label;
+    }
+
+    private beginScreen(name: ScreenName): Node {
         const prefabs = { UIMain: this.uiMainPrefab, UIGame: this.uiGamePrefab, UIEditor: this.uiEditorPrefab };
         return this.showScreenPrefab(prefabs[name], name);
     }
@@ -331,10 +329,10 @@ export class GameApp extends Component {
         });
         this.board.render(this.state);
 
-        this.sheepLabel = this.requireNode(bottom, 'SheepStatus').getComponent(Label);
-        this.goalLabel = this.requireNode(bottom, 'GoalStatus').getComponent(Label);
-        this.wolfLabel = this.requireNode(bottom, 'WolfStatus').getComponent(Label);
-        this.messageLabel = this.requireNode(bottom, 'MessageBar').getComponent(Label);
+        this.sheepLabel = this.requireLabel(this.requireNode(bottom, 'SheepStatus'));
+        this.goalLabel = this.requireLabel(this.requireNode(bottom, 'GoalStatus'));
+        this.wolfLabel = this.requireLabel(this.requireNode(bottom, 'WolfStatus'));
+        this.messageLabel = this.requireLabel(this.requireNode(bottom, 'MessageBar'));
         this.updateHud();
         this.updateUndoButton();
     }
@@ -564,35 +562,41 @@ export class GameApp extends Component {
         this.sounds.play('transition', 0.65);
         this.closeModal();
         this.closeGuide(false);
-        this.loadingRoot?.destroy();
-        if (!this.uiLoadingPrefab) return;
-        this.loadingRoot = instantiate(this.uiLoadingPrefab);
-        this.runtimeRoot.addChild(this.loadingRoot);
-        this.loadingRoot.setPosition(0, 0, 0);
-        const loadingContent = this.requireNode(this.loadingRoot, 'PrefabContent');
-        loadingContent.setScale(1, 1, 1);
-        const cloud = this.requireNode(loadingContent, 'MiddleContainer/LoadingCloud');
-        this.requireNode(loadingContent, 'MiddleContainer/LoadingLabel').active = false;
-        cloud.setPosition(-this.screenWidth * 1.3, 0, 0);
+        await this.runCloudTransition(async () => {
+            this.currentLevel = index;
+            const level = this.progressTracking ? this.levels[index] : this.playtestLevel;
+            if (level) this.state = createInitialState(level);
+            this.history = [];
+            this.buildGameScreen();
+            await new Promise<void>((resolve) => this.scheduleOnce(resolve));
+        });
+        this.isTransitioning = false;
+        this.maybeShowGuide();
+    }
 
+    private async runCloudTransition<T>(operation: () => Promise<T>): Promise<T> {
+        const cloud = this.transitionCloud;
+        if (!cloud?.isValid) return operation();
+        cloud.active = true;
+        cloud.setSiblingIndex(this.node.children.length - 1);
+        cloud.setPosition(-DESIGN_WIDTH * 1.2, 0, 0);
         await new Promise<void>((resolve) => {
             tween(cloud)
                 .to(0.43, { position: Vec3.ZERO }, { easing: 'cubicOut' })
-                .call(() => {
-                    this.currentLevel = index;
-                    const level = this.progressTracking ? this.levels[index] : this.playtestLevel;
-                    if (level) this.state = createInitialState(level);
-                    this.history = [];
-                    this.buildGameScreen();
-                })
-                .to(0.65, { position: new Vec3(this.screenWidth * 1.4, 0, 0) }, { easing: 'cubicIn' })
                 .call(() => resolve())
                 .start();
         });
-        this.loadingRoot?.destroy();
-        this.loadingRoot = null;
-        this.isTransitioning = false;
-        this.maybeShowGuide();
+        try {
+            return await operation();
+        } finally {
+            await new Promise<void>((resolve) => {
+                tween(cloud)
+                    .to(0.55, { position: new Vec3(DESIGN_WIDTH * 1.2, 0, 0) }, { easing: 'cubicIn' })
+                    .call(() => resolve())
+                    .start();
+            });
+            cloud.active = false;
+        }
     }
 
     private showResultModal(title: string, message: string, showNext: boolean): void {
@@ -776,7 +780,7 @@ export class GameApp extends Component {
         this.requireNode(top, 'GoalValue').getComponent(Label)!.string = `逃离 ${this.editorGoal}`;
         this.requireNode(top, 'RowsValue').getComponent(Label)!.string = `行 ${this.editorRows}`;
         this.requireNode(top, 'ColsValue').getComponent(Label)!.string = `列 ${this.editorCols}`;
-        this.requireNode(top, 'MoveObstacleToggle').getComponent(Label)!.string = this.editorMoveObstacle ? '障碍 开' : '障碍 关';
+        this.requireLabel(this.requireNode(top, 'MoveObstacleToggle')).string = this.editorMoveObstacle ? '障碍 开' : '障碍 关';
         bindButton(this.requireNode(top, 'GoalMinus'), () => this.changeEditorGoal(-1));
         bindButton(this.requireNode(top, 'GoalPlus'), () => this.changeEditorGoal(1));
         bindButton(this.requireNode(top, 'RowsMinus'), () => this.changeEditorSize(-1, 0));
@@ -812,7 +816,7 @@ export class GameApp extends Component {
         const palette = this.requireNode(bottom, 'Palette');
         palette.removeAllChildren();
         this.buildEditorPalette(palette);
-        this.editorMessageLabel = this.requireNode(bottom, 'EditorMessage').getComponent(Label);
+        this.editorMessageLabel = this.requireLabel(this.requireNode(bottom, 'EditorMessage'));
         this.updateEditorMessage();
     }
 

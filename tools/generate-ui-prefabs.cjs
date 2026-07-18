@@ -39,6 +39,7 @@ function buildPrefab(name, descriptors) {
     }
 
     function addNode(descriptor, parentId, isRoot = false) {
+        const splitLabel = Boolean(descriptor.sprite && descriptor.text !== undefined);
         const nodeId = data.length;
         data.push(null);
         const childIds = [];
@@ -85,7 +86,7 @@ function buildPrefab(name, descriptors) {
             attachComponentPrefabInfo(spriteComponent);
         }
 
-        if (descriptor.text !== undefined) {
+        if (descriptor.text !== undefined && !splitLabel) {
             const labelId = data.length;
             componentIds.push({ __id__: labelId });
             const labelComponent = {
@@ -105,7 +106,20 @@ function buildPrefab(name, descriptors) {
             attachComponentPrefabInfo(labelComponent);
         }
 
-        for (const child of descriptor.children ?? []) {
+        const children = [...(descriptor.children ?? [])];
+        if (splitLabel) {
+            children.push({
+                name: 'Label',
+                text: descriptor.text,
+                width: descriptor.width,
+                height: descriptor.height,
+                fontSize: descriptor.fontSize,
+                lineHeight: descriptor.lineHeight,
+                bold: descriptor.bold,
+                textColor: descriptor.textColor,
+            });
+        }
+        for (const child of children) {
             const childId = addNode(child, nodeId);
             childIds.push({ __id__: childId });
         }
@@ -134,7 +148,6 @@ const sprite = (name, image, width, height, x = 0, y = 0, extra = {}) =>
     ({ name, sprite: image, width, height, x, y, ...extra });
 
 buildPrefab('UIMain', [
-    sprite('Background', 'main-bg', 430, 760),
     { name: 'TopContainer', width: 430, height: 170, x: 0, y: 245, children: [
         label('Title', '狼来了', 370, 90, 0, 25, 64, { bold: true, textColor: { r: 255, g: 247, b: 211, a: 255 } }),
         label('Subtitle', '小羊快跑', 220, 38, 0, -25, 22, { bold: true }),
@@ -149,7 +162,6 @@ buildPrefab('UIMain', [
 ]);
 
 buildPrefab('UIGame', [
-    sprite('Background', 'main-bg', 430, 760),
     { name: 'TopContainer', width: 430, height: 110, x: 0, y: 310, children: [
         sprite('TopPanel', 'ui-panel-gold', 390, 58, 0, 20),
         sprite('HomeButton', 'button-home', 38, 40, -170, 20),
@@ -185,7 +197,6 @@ buildPrefab('UIGame', [
 ]);
 
 buildPrefab('UIEditor', [
-    sprite('Background', 'main-bg', 430, 760),
     { name: 'TopContainer', width: 430, height: 160, x: 0, y: 292, children: [
         sprite('Header', 'ui-panel-gold', 398, 58, 0, 42),
         sprite('HomeButton', 'button-home', 38, 40, -175, 42),
@@ -221,16 +232,6 @@ buildPrefab('UIEditor', [
         { name: 'Palette', width: 398, height: 62, x: 0, y: 3, children: [0, 1, 2, 3, 4].map((i) => sprite(`Sheep-${i + 1}`, i ? `sheep-${i + 1}` : 'sheep', 42, 42, -120 + i * 60, 0)) },
         { name: 'EditorMessage', sprite: 'ui-bar-dark', text: '选择下方素材，点击地图放置', width: 398, height: 38, x: 0, y: -57, fontSize: 16, bold: true },
     ] },
-]);
-
-buildPrefab('UILoading', [
-    sprite('Background', 'main-bg', 430, 760),
-    { name: 'TopContainer', width: 430, height: 160, x: 0, y: 300 },
-    { name: 'MiddleContainer', width: 430, height: 440, children: [
-        sprite('LoadingCloud', 'cloud-panel', 430, 220),
-        label('LoadingLabel', '加载中...', 220, 48, 0, 0, 22, { bold: true }),
-    ] },
-    { name: 'BottomContainer', width: 430, height: 160, x: 0, y: -300 },
 ]);
 
 buildPrefab('UIGuide', [

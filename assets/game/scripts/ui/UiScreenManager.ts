@@ -1,7 +1,7 @@
 import { instantiate, Node, Prefab, UITransform } from 'cc';
 import { createUiNode } from './UiFactory';
 
-export type ScreenName = 'UIMain' | 'UIGame' | 'UILoading' | 'UIEditor';
+export type ScreenName = 'UIMain' | 'UIGame' | 'UIEditor';
 
 export class UiScreenManager {
     private current: Node | null = null;

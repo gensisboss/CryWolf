@@ -113,7 +113,7 @@ test('previous and undo buttons share next button canvas and SpriteFrame geometr
 
 test('all runtime UI screens are loadable Cocos prefabs', () => {
     const uiDirectory = path.join(projectRoot, 'assets', 'resources', 'ui');
-    const expected = ['UIMain', 'UIGame', 'UILoading', 'UIGuide', 'UIEditor'];
+    const expected = ['UIMain', 'UIGame', 'UIGuide', 'UIEditor'];
     const gameApp = fs.readFileSync(
         path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'),
         'utf8',
@@ -136,7 +136,7 @@ test('all runtime UI screens are loadable Cocos prefabs', () => {
     });
 });
 
-test('Main scene owns all UI prefabs and UiScreenManager instantiates them', () => {
+test('Main scene owns runtime UI prefabs and scene-level presentation nodes', () => {
     const scene = JSON.parse(fs.readFileSync(
         path.join(projectRoot, 'assets', 'scenes', 'Main.scene'),
         'utf8',
@@ -150,9 +150,14 @@ test('Main scene owns all UI prefabs and UiScreenManager instantiates them', () 
         path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'),
         'utf8',
     );
-    ['101', '102', '103', '104', '105'].forEach((suffix) => {
+    ['101', '102', '104', '105'].forEach((suffix) => {
         assert.match(serialized, new RegExp(`7445eaf4-7ad4-4e42-8ec2-1f10d494d${suffix}`));
     });
+    assert.doesNotMatch(serialized, /7445eaf4-7ad4-4e42-8ec2-1f10d494d103/);
+    const canvas = scene.find((item) => item.__type__ === 'cc.Node' && item._name === 'Canvas');
+    const childNames = canvas._children.map((child) => scene[child.__id__]._name);
+    assert.equal(childNames[0], 'Background');
+    assert.equal(childNames.at(-1), 'TransitionCloud');
     assert.match(manager, /showPrefab\(prefab: Prefab/);
     assert.match(gameApp, /showScreenPrefab\(this\.uiGamePrefab, 'UIGame'\)/);
 });
@@ -183,7 +188,7 @@ test('game and editor prefabs leave generated board scenes empty', () => {
 });
 
 test('UI prefabs group layout into top, middle, and bottom containers', () => {
-    ['UIMain', 'UIGame', 'UILoading', 'UIGuide', 'UIEditor'].forEach((name) => {
+    ['UIMain', 'UIGame', 'UIGuide', 'UIEditor'].forEach((name) => {
         const prefab = JSON.parse(fs.readFileSync(
             path.join(projectRoot, 'assets', 'resources', 'ui', `${name}.prefab`),
             'utf8',
@@ -205,7 +210,7 @@ test('UI prefabs group layout into top, middle, and bottom containers', () => {
 });
 
 test('every serialized UI node and component has native prefab metadata', () => {
-    ['UIMain', 'UIGame', 'UILoading', 'UIGuide', 'UIEditor'].forEach((name) => {
+    ['UIMain', 'UIGame', 'UIGuide', 'UIEditor'].forEach((name) => {
         const prefab = JSON.parse(fs.readFileSync(
             path.join(projectRoot, 'assets', 'resources', 'ui', `${name}.prefab`),
             'utf8',
@@ -220,12 +225,28 @@ test('every serialized UI node and component has native prefab metadata', () => 
     });
 });
 
+test('prefab nodes never mix sprite and label rendering components', () => {
+    for (const prefabName of ['UIMain', 'UIGame', 'UIGuide', 'UIEditor']) {
+        const prefab = JSON.parse(fs.readFileSync(
+            path.join(projectRoot, 'assets', 'resources', 'ui', `${prefabName}.prefab`),
+            'utf8',
+        ));
+        for (const item of prefab) {
+            if (item.__type__ !== 'cc.Node') continue;
+            const componentTypes = item._components.map((component) => prefab[component.__id__]?.__type__);
+            assert.ok(
+                !(componentTypes.includes('cc.Sprite') && componentTypes.includes('cc.Label')),
+                `${prefabName}/${item._name} must use a child Label node`,
+            );
+        }
+    }
+});
+
 test('prefab UI panels and commands use dedicated sprite assets', () => {
     const expectedByPrefab = {
-        UIMain: ['Background', 'StartButton', 'EditorButton'],
+        UIMain: ['StartButton', 'EditorButton'],
         UIGame: ['TopPanel', 'SeasonBar', 'SheepStatus', 'GoalStatus', 'WolfStatus', 'MessageBar', 'ModalShade', 'ModalPanel'],
         UIEditor: ['Header', 'SizeBar', 'GoalMinus', 'GoalPlus', 'MoveObstacleToggle', 'ResizeMap', 'ClearButton', 'PlayButton', 'SaveButton', 'EditorTabs', 'EditorMessage'],
-        UILoading: ['Background', 'LoadingCloud'],
         UIGuide: ['GuideShadeTop', 'GuideShadeBottom', 'GuideShadeLeft', 'GuideShadeRight', 'GuideDialog', 'GuideGrandpa'],
     };
     Object.entries(expectedByPrefab).forEach(([name, expectedNodes]) => {
