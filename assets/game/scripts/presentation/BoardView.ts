@@ -26,6 +26,7 @@ interface BoardViewOptions {
 export class BoardView {
     private readonly frame: Node;
     private readonly content: Node;
+    private readonly border: Node;
     private readonly actorNodes = new Map<string, Node>();
     private readonly cellNodes = new Map<string, Node>();
     private boardPanel: Node | null = null;
@@ -45,8 +46,8 @@ export class BoardView {
     ) {
         this.frame = createUiNode(parent, 'BoardFrame', options.width, options.height);
         createCoverSprite(this.frame, 'MapBackground', assets.get('mapBackground'), options.width, options.height);
-        const border = createUiNode(this.frame, 'BoardFrameBorder', options.width, options.height);
-        drawPanel(border, options.width - 2, options.height - 2, {
+        this.border = createUiNode(this.frame, 'BoardFrameBorder', options.width, options.height);
+        drawPanel(this.border, options.width - 2, options.height - 2, {
             fill: new Color(255, 255, 255, 34),
             stroke: new Color(84, 58, 26, 220),
             lineWidth: 3,
@@ -55,7 +56,7 @@ export class BoardView {
         this.content = createUiNode(this.frame, 'BoardWorldRoot', options.width - 16, options.height - 16);
         const mask = this.content.addComponent(Mask);
         mask.type = Mask.Type.GRAPHICS_RECT;
-        border.setSiblingIndex(this.content.getSiblingIndex() + 1);
+        this.border.setSiblingIndex(this.content.getSiblingIndex() + 1);
         this.bindInput();
     }
 
@@ -87,6 +88,13 @@ export class BoardView {
         const boardWidth = visibleCols * this.cellSize + (visibleCols - 1) * this.gap + 16;
         const boardHeight = visibleRows * this.cellSize + (visibleRows - 1) * this.gap + 16;
         this.content.getComponent(UITransform)!.setContentSize(boardWidth, boardHeight);
+        this.border.getComponent(UITransform)!.setContentSize(boardWidth, boardHeight);
+        drawPanel(this.border, boardWidth - 2, boardHeight - 2, {
+            fill: new Color(255, 255, 255, 34),
+            stroke: new Color(84, 58, 26, 220),
+            lineWidth: 3,
+            radius: 8,
+        });
         const boardPanel = createPanel(this.content, 'BoardPanel', boardWidth, boardHeight, 0, 0, {
             fill: new Color(67, 101, 57, 230),
             stroke: new Color(57, 51, 25, 235),

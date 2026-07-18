@@ -37,7 +37,8 @@ export function createUiNode(
 }
 
 export function drawPanel(node: Node, width: number, height: number, style: PanelStyle): Graphics {
-    const graphics = node.addComponent(Graphics);
+    const graphics = node.getComponent(Graphics) ?? node.addComponent(Graphics);
+    graphics.clear();
     const radius = Math.max(0, Math.min(style.radius ?? 0, width / 2, height / 2));
     graphics.fillColor = style.fill;
     graphics.roundRect(-width / 2, -height / 2, width, height, radius);
