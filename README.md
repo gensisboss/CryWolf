@@ -1,6 +1,7 @@
 # CryWolf
-
 [在线试玩](https://gensisboss.github.io/CryWolf/)
+
+狼来了小游戏，使用 Cocos Creator 3.8.4 制作。
 
 Native Cocos Creator 3.8.4 migration of the `SlideWeb` puzzle game.
 
