@@ -21,11 +21,15 @@ test('editor creates, places, and resizes maps without mutating prior data', () 
     assert.deepEqual(resized, [[0, 0], [0, 0], [0, 0]]);
 });
 
-test('editor size has no gameplay maximum', () => {
+test('editor and imported maps are limited to twenty by twenty', () => {
     assert.equal(clampEditorSize(-5, 6), 1);
     assert.equal(clampEditorSize(8.9, 6), 8);
-    assert.equal(clampEditorSize(42, 6), 42);
-    assert.equal(clampEditorSize(1000, 6), 1000);
+    assert.equal(clampEditorSize(42, 6), 20);
+    assert.equal(clampEditorSize(1000, 6), 20);
+    assert.equal(createEmptyMap(30, 40).length, 20);
+    assert.equal(createEmptyMap(30, 40)[0].length, 20);
+    const oversized = Array.from({ length: 21 }, () => Array(20).fill(0));
+    assert.deepEqual(normalizeLevels([{ goal: 1, map: oversized }]), []);
 });
 
 test('level normalization preserves title, goal, map, and obstacle movement', () => {

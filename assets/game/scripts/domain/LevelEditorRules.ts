@@ -2,10 +2,12 @@ import { SHEEP_IDS } from './EntityCatalog';
 import { LevelDefinition } from './GameTypes';
 
 export const MIN_EDITOR_SIZE = 1;
-export const MAX_EDITOR_SIZE = Number.MAX_SAFE_INTEGER;
+export const MAX_EDITOR_SIZE = 20;
 
 export function createEmptyMap(rows = 6, cols = 6): number[][] {
-    return Array.from({ length: rows }, () => Array<number>(cols).fill(0));
+    const safeRows = clampEditorSize(rows, 6);
+    const safeCols = clampEditorSize(cols, 6);
+    return Array.from({ length: safeRows }, () => Array<number>(safeCols).fill(0));
 }
 
 export function cloneMap(map: number[][]): number[][] {
@@ -18,9 +20,11 @@ export function clampEditorSize(value: number, fallback: number): number {
 }
 
 export function resizeMap(map: number[][], rows: number, cols: number): number[][] {
-    const next = createEmptyMap(rows, cols);
-    for (let row = 0; row < Math.min(rows, map.length); row += 1) {
-        for (let col = 0; col < Math.min(cols, map[row].length); col += 1) {
+    const safeRows = clampEditorSize(rows, map.length || 6);
+    const safeCols = clampEditorSize(cols, map[0]?.length || 6);
+    const next = createEmptyMap(safeRows, safeCols);
+    for (let row = 0; row < Math.min(safeRows, map.length); row += 1) {
+        for (let col = 0; col < Math.min(safeCols, map[row].length); col += 1) {
             next[row][col] = map[row][col];
         }
     }
@@ -47,18 +51,23 @@ export function buildLevel(
     title = '',
 ): LevelDefinition {
     const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+    const limitedMap = map.slice(0, MAX_EDITOR_SIZE).map((row) => row.slice(0, MAX_EDITOR_SIZE));
     return {
         ...(normalizedTitle ? { title: normalizedTitle } : {}),
         goal: Math.max(1, Math.floor(Number(goal) || 1)),
         moveObstacle: Number(moveObstacle) === 1 ? 1 : 0,
-        map: cloneMap(map),
+        map: cloneMap(limitedMap),
     };
 }
 
 function isMap(value: unknown): value is number[][] {
     return Array.isArray(value)
         && value.length > 0
-        && value.every((row) => Array.isArray(row) && row.length > 0 && row.every(Number.isFinite));
+        && value.length <= MAX_EDITOR_SIZE
+        && value.every((row) => Array.isArray(row)
+            && row.length > 0
+            && row.length <= MAX_EDITOR_SIZE
+            && row.every(Number.isFinite));
 }
 
 export function normalizeLevels(source: unknown): LevelDefinition[] {

@@ -294,7 +294,7 @@ test('prefab UI panels and commands use dedicated sprite assets', () => {
     });
 });
 
-test('BoardView virtualizes large maps and enables the draggable minimap', () => {
+test('BoardView builds the full bounded map and enables the draggable minimap', () => {
     const boardView = fs.readFileSync(
         path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'BoardView.ts'),
         'utf8',
@@ -303,8 +303,10 @@ test('BoardView virtualizes large maps and enables the draggable minimap', () =>
         path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'SlideMinimapView.ts'),
         'utf8',
     );
-    assert.match(boardView, /row = this\.viewport\.row/);
-    assert.match(boardView, /filter\(\(item\) => isInViewport\(item, this\.viewport\)\)/);
+    assert.match(boardView, /row = 0; row < state\.rows/);
+    assert.match(boardView, /col = 0; col < state\.cols/);
+    assert.doesNotMatch(boardView, /this\.render\(intermediate/);
+    assert.match(boardView, /this\.boardPanel\.setPosition\(-this\.visualViewport\.col \* stride/);
     assert.match(boardView, /state\.rows > VIEWPORT_SIZE \|\| state\.cols > VIEWPORT_SIZE/);
     assert.match(minimap, /Node\.EventType\.TOUCH_MOVE/);
 });
