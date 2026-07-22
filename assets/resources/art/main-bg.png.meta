@@ -50,10 +50,10 @@
         "height": 1260,
         "rawWidth": 1120,
         "rawHeight": 1260,
-        "borderTop": 0,
-        "borderBottom": 0,
-        "borderLeft": 0,
-        "borderRight": 0,
+        "borderTop": 764,
+        "borderBottom": 486,
+        "borderLeft": 560,
+        "borderRight": 545,
         "packable": true,
         "pixelsToUnit": 100,
         "pivotX": 0.5,
@@ -129,6 +129,9 @@
     "type": "sprite-frame",
     "hasAlpha": true,
     "fixAlphaTransparencyArtifacts": false,
-    "redirect": "fbb32ba5-36ab-4952-87d0-aed586a6123f@6c48a"
+    "redirect": "fbb32ba5-36ab-4952-87d0-aed586a6123f@6c48a",
+    "compressSettings": {
+      "useCompressTexture": false
+    }
   }
 }

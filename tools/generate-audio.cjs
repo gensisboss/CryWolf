@@ -32,11 +32,37 @@ function tone(duration, render) {
 }
 
 const sine = (frequency, time) => Math.sin(Math.PI * 2 * frequency * time);
+const square = (frequency, time) => Math.sign(sine(frequency, time));
+const note = (frequency, time, start, length) => {
+    if (time < start || time >= start + length) return 0;
+    const local = time - start;
+    const envelope = Math.min(1, local / 0.025) * Math.max(0, 1 - local / length);
+    return envelope * (0.72 * sine(frequency, local) + 0.18 * square(frequency * 0.5, local));
+};
+
+function backgroundMusic() {
+    const melody = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 493.88, 523.25,
+        392.00, 440.00, 523.25, 587.33, 523.25, 440.00, 392.00, 493.88];
+    const bass = [130.81, 146.83, 164.81, 196.00, 130.81, 146.83, 123.47, 130.81];
+    const beat = 0.375;
+    return tone(melody.length * beat, (t) => {
+        const melodyIndex = Math.min(melody.length - 1, Math.floor(t / beat));
+        const bassIndex = Math.min(bass.length - 1, Math.floor(t / (beat * 2)));
+        const pluck = note(melody[melodyIndex], t, melodyIndex * beat, beat * 0.92);
+        const low = note(bass[bassIndex], t, bassIndex * beat * 2, beat * 1.8);
+        const pulse = (t % beat) < 0.025 ? noise() * 0.07 : 0;
+        return 0.16 * pluck + 0.09 * low + pulse;
+    });
+}
+
 const sounds = {
     click: tone(0.10, (t) => 0.24 * sine(620 + 1600 * t, t)),
     slide: tone(0.22, (t, d) => 0.14 * noise() * (1 - t / d) + 0.12 * sine(260 - 90 * t / d, t)),
     escape: tone(0.34, (t) => 0.22 * sine(t < 0.11 ? 660 : t < 0.22 ? 880 : 1100, t)),
     wolf: tone(0.36, (t, d) => 0.24 * sine(190 - 70 * t / d, t) + 0.08 * noise()),
+    eat: tone(0.44, (t, d) => 0.15 * noise() * (1 - t / d) + 0.18 * square(180 - 65 * t / d, t)),
+    death: tone(0.62, (t, d) => 0.18 * sine(420 - 300 * t / d, t) + 0.08 * noise() * (1 - t / d)),
+    trap: tone(0.48, (t, d) => 0.18 * square(560 - 360 * t / d, t) + 0.10 * noise() * Math.sin(Math.PI * t / d)),
     win: tone(0.68, (t) => {
         const notes = [523.25, 659.25, 783.99, 1046.5];
         return 0.20 * sine(notes[Math.min(3, Math.floor(t / 0.16))], t);
@@ -45,6 +71,7 @@ const sounds = {
     transition: tone(0.48, (t, d) => 0.12 * noise() * Math.sin(Math.PI * t / d) + 0.10 * sine(300 + 700 * t / d, t)),
     undo: tone(0.28, (t, d) => 0.18 * sine(760 - 430 * t / d, t)),
     guide: tone(0.24, (t) => 0.16 * sine(t < 0.12 ? 740 : 988, t)),
+    bgm: backgroundMusic(),
 };
 
 for (const [name, wav] of Object.entries(sounds)) {

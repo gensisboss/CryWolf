@@ -72,7 +72,6 @@ interface EditorGroup {
 }
 
 const EDITOR_GROUPS: EditorGroup[] = [
-    { key: 'erase', label: '擦除', tools: [{ label: '擦除', id: 0 }] },
     { key: 'sheep', label: '小羊', tools: SHEEP_IDS.slice(0, 5).map((id, index) => ({ label: `羊${index + 1}`, id })) },
     { key: 'wolf', label: '狼', tools: WOLF_IDS.slice(0, 5).map((id, index) => ({ label: `狼${index + 1}`, id })) },
     { key: 'village', label: '羊村', tools: VILLAGE_IDS.slice(0, 4).map((id, index) => ({ label: `羊村${index + 1}`, id })) },
@@ -179,6 +178,7 @@ export class GameApp extends Component {
                 this.state = createInitialState(this.levels[0]);
                 this.loadSavedEditorLevel();
                 this.showStartScreen();
+                this.sounds.playMusic();
             });
         } catch (error) {
             this.showBootError(error instanceof Error ? error.message : String(error));
@@ -489,12 +489,17 @@ export class GameApp extends Component {
         this.updateHud();
         this.isMoving = false;
 
-        if (this.state.status === 'playing') {
-            if (resolution.events.escaped.length > 0) {
-                this.sounds.play('escape', 0.82);
-            } else if (resolution.events.attacks.length > 0 || resolution.events.eaten.length > 0) {
-                this.sounds.play('wolf', 0.82);
-            }
+        if (resolution.events.escaped.length > 0) {
+            this.sounds.play('escape', 0.82);
+        }
+        if (resolution.events.attacks.length > 0 || resolution.events.eaten.length > 0) {
+            this.sounds.play('eat', 0.88);
+        }
+        if (resolution.events.trappedSheep.length > 0) {
+            this.sounds.play('trap', 0.85);
+        }
+        if (resolution.events.trappedWolves.length > 0) {
+            this.sounds.play('death', 0.78);
         }
 
         if (this.state.status === 'win') {
@@ -920,12 +925,8 @@ export class GameApp extends Component {
                 lineWidth: selected ? 3 : 0,
                 radius: 4,
             });
-            if (tool.id === 0) {
-                createLabel(slot, 'Eraser', '擦', 38, 38, 20, new Color(255, 246, 208));
-            } else {
-                const frame = this.assets.forTile(tool.id);
-                if (frame) createSprite(slot, `ToolArt-${tool.id}`, frame, 40, 40);
-            }
+            const frame = this.assets.forTile(tool.id);
+            if (frame) createSprite(slot, `ToolArt-${tool.id}`, frame, 40, 40);
             bindButton(slot, () => {
                 this.selectedEditorId = tool.id;
                 this.editorMessage = tool.id ? `已选择：${tool.label}` : '已选择：擦除';
@@ -936,7 +937,8 @@ export class GameApp extends Component {
 
     private placeEditorTile(row: number, col: number): void {
         this.sounds.play('click', 0.55);
-        this.editorMap = placeTile(this.editorMap, row, col, this.selectedEditorId);
+        const current = this.editorMap[row]?.[col] ?? 0;
+        this.editorMap = placeTile(this.editorMap, row, col, current === this.selectedEditorId ? 0 : this.selectedEditorId);
         this.renderEditorBoard();
     }
 

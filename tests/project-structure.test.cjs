@@ -80,7 +80,7 @@ test('all runtime JSON and art resources were imported into the resources bundle
 
 test('generated audio effects are valid imported PCM wave resources', () => {
     const audioDirectory = path.join(projectRoot, 'assets', 'resources', 'audio');
-    const expected = ['click', 'slide', 'escape', 'wolf', 'win', 'lose', 'transition', 'undo', 'guide'];
+    const expected = ['click', 'slide', 'escape', 'wolf', 'eat', 'death', 'trap', 'win', 'lose', 'transition', 'undo', 'guide', 'bgm'];
     expected.forEach((name) => {
         const wavPath = path.join(audioDirectory, `${name}.wav`);
         const wav = fs.readFileSync(wavPath);
@@ -90,6 +90,12 @@ test('generated audio effects are valid imported PCM wave resources', () => {
         assert.ok(wav.length > 1000);
         assert.equal(meta.importer, 'audio-clip');
     });
+});
+
+test('editor clears a selected tile by tapping the same role again without an eraser tool', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    assert.doesNotMatch(gameApp, /key:\s*'erase'/);
+    assert.match(gameApp, /current === this\.selectedEditorId \? 0 : this\.selectedEditorId/);
 });
 
 test('previous and undo buttons share next button canvas and SpriteFrame geometry', () => {
@@ -310,6 +316,9 @@ test('BoardView builds the full bounded map and enables the draggable minimap', 
     assert.match(boardView, /this\.content\.getComponent\(UITransform\)!\.setContentSize\(boardWidth, boardHeight\)/);
     assert.match(boardView, /this\.border\.setSiblingIndex\(this\.content\.getSiblingIndex\(\) \+ 1\)/);
     assert.match(boardView, /this\.border\.getComponent\(UITransform\)!\.setContentSize\(boardWidth, boardHeight\)/);
+    assert.match(boardView, /const mapWidth = state\.cols \* this\.cellSize/);
+    assert.match(boardView, /const mapHeight = state\.rows \* this\.cellSize/);
+    assert.match(boardView, /createPanel\(boardPanel, 'MapBase', mapWidth, mapHeight, mapCenterX, mapCenterY/);
     assert.match(boardView, /state\.rows > VIEWPORT_SIZE \|\| state\.cols > VIEWPORT_SIZE/);
     assert.match(minimap, /Node\.EventType\.TOUCH_MOVE/);
 });

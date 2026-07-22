@@ -1,6 +1,7 @@
 import {
     Color,
     EventTouch,
+    Graphics,
     Mask,
     Node,
     tween,
@@ -95,12 +96,19 @@ export class BoardView {
             lineWidth: 3,
             radius: 8,
         });
-        const boardPanel = createPanel(this.content, 'BoardPanel', boardWidth, boardHeight, 0, 0, {
-            fill: new Color(67, 101, 57, 230),
-            stroke: new Color(57, 51, 25, 235),
+        const stride = this.cellSize + this.gap;
+        const mapWidth = state.cols * this.cellSize + (state.cols - 1) * this.gap + 16;
+        const mapHeight = state.rows * this.cellSize + (state.rows - 1) * this.gap + 16;
+        const mapCenterX = (state.cols - visibleCols) * stride / 2;
+        const mapCenterY = -(state.rows - visibleRows) * stride / 2;
+        const boardPanel = createUiNode(this.content, 'BoardPanel', mapWidth, mapHeight);
+        const mapBase = createPanel(boardPanel, 'MapBase', mapWidth, mapHeight, mapCenterX, mapCenterY, {
+            fill: new Color(52, 82, 45, 242),
+            stroke: new Color(49, 42, 25, 245),
             lineWidth: 3,
-            radius: 8,
+            radius: 4,
         });
+        this.decorateMapBase(mapBase, mapWidth, mapHeight);
         this.boardPanel = boardPanel;
 
         const obstacleByCell = new Map(state.obstacles.map((entity) => [this.positionKey(entity.row, entity.col), entity]));
@@ -114,19 +122,23 @@ export class BoardView {
                 const trap = trapByCell.get(key);
                 const village = villageByCell.get(key);
                 const position = this.positionFor(row, col, state);
+                const grassVariant = (row + col) % 2 === 0
+                    ? new Color(126, 181, 91, 250)
+                    : new Color(116, 170, 82, 250);
                 const fill = obstacle && state.level.moveObstacle === 0
-                    ? new Color(106, 82, 48, 245)
+                    ? new Color(116, 88, 49, 250)
                     : trap
-                        ? new Color(153, 70, 57, 245)
+                        ? new Color(155, 76, 61, 250)
                         : village
-                            ? new Color(145, 126, 68, 245)
-                            : new Color(115, 174, 82, 245);
+                            ? new Color(155, 135, 73, 250)
+                            : grassVariant;
                 const cell = createPanel(boardPanel, `Cell-${row}-${col}`, this.cellSize, this.cellSize, position.x, position.y, {
                     fill,
-                    stroke: new Color(235, 226, 157, 70),
+                    stroke: new Color(229, 231, 165, 76),
                     lineWidth: 1,
-                    radius: 3,
+                    radius: 1,
                 });
+                this.decorateCell(cell, row, col, fill);
                 this.cellNodes.set(key, cell);
                 if (this.options.onCellPress) {
                     cell.on(Node.EventType.TOUCH_END, (event: EventTouch) => {
@@ -193,21 +205,27 @@ export class BoardView {
         }
 
         const effects: Array<Promise<void>> = [];
-        const disappearing = new Set([
-            ...resolution.events.escaped,
-            ...resolution.events.trappedSheep,
-            ...resolution.events.trappedWolves,
-        ]);
-        disappearing.forEach((key) => {
+        resolution.events.escaped.forEach((key) => {
             const node = this.actorNodes.get(key);
-            if (node) effects.push(this.tweenDisappear(node, 0.28));
+            if (node) effects.push(this.tweenEnterVillage(node));
+        });
+        [...resolution.events.trappedSheep, ...resolution.events.trappedWolves].forEach((key) => {
+            const node = this.actorNodes.get(key);
+            if (node) effects.push(this.tweenTrapDeath(node));
         });
 
         resolution.events.attacks.forEach((attack) => {
             const wolf = this.actorNodes.get(attack.wolfKey);
             const sheep = this.actorNodes.get(attack.targetKey);
-            if (wolf) effects.push(this.tweenPosition(wolf, this.positionFor(attack.to.row, attack.to.col, this.state!), 0.18));
-            if (sheep) effects.push(this.tweenDisappear(sheep, 0.22));
+            if (wolf && sheep) {
+                effects.push(this.tweenWolfAttack(
+                    wolf,
+                    sheep,
+                    this.positionFor(attack.to.row, attack.to.col, this.state!),
+                ));
+            } else if (sheep) {
+                effects.push(this.tweenDisappear(sheep, 0.22));
+            }
         });
         await Promise.all(effects);
     }
@@ -270,6 +288,40 @@ export class BoardView {
         if (!this.boardPanel) return;
         const stride = this.cellSize + this.gap;
         this.boardPanel.setPosition(-this.visualViewport.col * stride, this.visualViewport.row * stride, 0);
+    }
+
+    private decorateMapBase(node: Node, width: number, height: number): void {
+        const graphics = node.getComponent(Graphics);
+        if (!graphics) return;
+        graphics.fillColor = new Color(84, 123, 61, 105);
+        for (let x = -width / 2 + 12; x < width / 2 - 8; x += 24) {
+            graphics.rect(x, -height / 2 + 7, 9, 2);
+        }
+        graphics.fill();
+    }
+
+    private decorateCell(node: Node, row: number, col: number, fill: Color): void {
+        const graphics = node.getComponent(Graphics);
+        if (!graphics || this.cellSize < 28) return;
+        const seed = (row * 17 + col * 31) % 11;
+        const half = this.cellSize / 2;
+        graphics.fillColor = new Color(
+            Math.min(255, fill.r + 34),
+            Math.min(255, fill.g + 38),
+            Math.min(255, fill.b + 22),
+            72,
+        );
+        graphics.rect(-half + 6 + seed, half - 9, 7, 2);
+        graphics.rect(half - 11, -half + 7 + (seed % 5), 3, 3);
+        graphics.fill();
+        graphics.fillColor = new Color(
+            Math.max(0, fill.r - 42),
+            Math.max(0, fill.g - 38),
+            Math.max(0, fill.b - 26),
+            52,
+        );
+        graphics.rect(-half + 5, -half + 6 + (seed % 7), 5, 2);
+        graphics.fill();
     }
 
     public async animateRestore(target: GameState): Promise<void> {
@@ -374,6 +426,68 @@ export class BoardView {
                 .to(duration, { scale: new Vec3(0.2, 0.2, 1) }, { easing: 'cubicIn' })
                 .call(() => resolve())
                 .start();
+        });
+    }
+
+    private tweenEnterVillage(node: Node): Promise<void> {
+        const opacity = node.getComponent(UIOpacity) ?? node.addComponent(UIOpacity);
+        const start = node.position.clone();
+        return new Promise((resolve) => {
+            tween(node)
+                .to(0.12, {
+                    position: new Vec3(start.x, start.y + this.cellSize * 0.18, 0),
+                    scale: new Vec3(1.12, 1.12, 1),
+                }, { easing: 'quadOut' })
+                .to(0.24, {
+                    position: new Vec3(start.x, start.y - this.cellSize * 0.08, 0),
+                    scale: new Vec3(0.12, 0.12, 1),
+                }, { easing: 'quadIn' })
+                .call(() => resolve())
+                .start();
+            tween(opacity).delay(0.14).to(0.22, { opacity: 0 }).start();
+        });
+    }
+
+    private tweenTrapDeath(node: Node): Promise<void> {
+        const opacity = node.getComponent(UIOpacity) ?? node.addComponent(UIOpacity);
+        const start = node.position.clone();
+        return new Promise((resolve) => {
+            tween(node)
+                .to(0.09, { scale: new Vec3(1.16, 0.82, 1) }, { easing: 'quadOut' })
+                .to(0.30, {
+                    position: new Vec3(start.x, start.y - this.cellSize * 0.2, 0),
+                    eulerAngles: new Vec3(0, 0, 150),
+                    scale: new Vec3(0.08, 0.08, 1),
+                }, { easing: 'cubicIn' })
+                .call(() => resolve())
+                .start();
+            tween(opacity).delay(0.12).to(0.27, { opacity: 0 }).start();
+        });
+    }
+
+    private tweenWolfAttack(wolf: Node, sheep: Node, target: Vec3): Promise<void> {
+        const sheepOpacity = sheep.getComponent(UIOpacity) ?? sheep.addComponent(UIOpacity);
+        const wolfStart = wolf.position.clone();
+        const sheepStart = sheep.position.clone();
+        const recoil = new Vec3(
+            wolfStart.x + (wolfStart.x - target.x) * 0.18,
+            wolfStart.y + (wolfStart.y - target.y) * 0.18,
+            0,
+        );
+        return new Promise((resolve) => {
+            tween(wolf)
+                .to(0.10, { position: recoil, scale: new Vec3(0.92, 1.08, 1) }, { easing: 'quadOut' })
+                .to(0.14, { position: target, scale: new Vec3(1.18, 0.88, 1) }, { easing: 'cubicIn' })
+                .to(0.10, { scale: Vec3.ONE }, { easing: 'quadOut' })
+                .call(() => resolve())
+                .start();
+            tween(sheep)
+                .delay(0.10)
+                .to(0.05, { position: new Vec3(sheepStart.x - 3, sheepStart.y + 2, 0) })
+                .to(0.05, { position: new Vec3(sheepStart.x + 3, sheepStart.y - 2, 0) })
+                .to(0.14, { scale: new Vec3(0.08, 0.08, 1) }, { easing: 'cubicIn' })
+                .start();
+            tween(sheepOpacity).delay(0.17).to(0.17, { opacity: 0 }).start();
         });
     }
 }

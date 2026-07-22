@@ -4,6 +4,7 @@ import {
     Graphics,
     HorizontalTextAlignment,
     Label,
+    LabelOutline,
     Layers,
     Node,
     Sprite,
@@ -48,6 +49,29 @@ export function drawPanel(node: Node, width: number, height: number, style: Pane
         graphics.strokeColor = style.stroke;
         graphics.roundRect(-width / 2, -height / 2, width, height, radius);
         graphics.stroke();
+    }
+    if (style.fill.a > 40 && width >= 24 && height >= 20) {
+        const inset = Math.max(2, Math.min(5, Math.floor(Math.min(width, height) * 0.08)));
+        const highlight = new Color(
+            Math.min(255, style.fill.r + 34),
+            Math.min(255, style.fill.g + 30),
+            Math.min(255, style.fill.b + 22),
+            Math.min(150, style.fill.a),
+        );
+        const shade = new Color(
+            Math.max(0, style.fill.r - 38),
+            Math.max(0, style.fill.g - 34),
+            Math.max(0, style.fill.b - 28),
+            Math.min(170, style.fill.a),
+        );
+        graphics.fillColor = highlight;
+        graphics.rect(-width / 2 + inset, height / 2 - inset - 2, width - inset * 2, 2);
+        graphics.rect(-width / 2 + inset, -height / 2 + inset, 2, height - inset * 2);
+        graphics.fill();
+        graphics.fillColor = shade;
+        graphics.rect(-width / 2 + inset, -height / 2 + inset, width - inset * 2, 3);
+        graphics.rect(width / 2 - inset - 3, -height / 2 + inset, 3, height - inset * 2);
+        graphics.fill();
     }
     return graphics;
 }
@@ -146,7 +170,7 @@ export function createTextButton(
         lineWidth: 2,
         radius: 6,
     });
-    createLabel(
+    const label = createLabel(
         node,
         `${name}Label`,
         text,
@@ -155,6 +179,9 @@ export function createTextButton(
         Math.min(18, Math.floor(height * 0.45)),
         primary ? new Color(255, 246, 216) : new Color(78, 52, 23),
     );
+    const outline = label.node.addComponent(LabelOutline);
+    outline.color = primary ? new Color(37, 54, 29, 230) : new Color(255, 237, 184, 210);
+    outline.width = primary ? 2 : 1;
     bindButton(node, callback);
     return node;
 }
