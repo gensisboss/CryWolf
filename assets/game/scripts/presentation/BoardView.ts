@@ -22,6 +22,7 @@ interface BoardViewOptions {
     height: number;
     onSwipe?: (direction: Direction) => void;
     onCellPress?: (row: number, col: number) => void;
+    editorMode?: boolean;
 }
 
 export class BoardView {
@@ -122,16 +123,8 @@ export class BoardView {
                 const trap = trapByCell.get(key);
                 const village = villageByCell.get(key);
                 const position = this.positionFor(row, col, state);
-                const grassVariant = (row + col) % 2 === 0
-                    ? new Color(126, 181, 91, 250)
-                    : new Color(116, 170, 82, 250);
-                const fill = obstacle && state.level.moveObstacle === 0
-                    ? new Color(116, 88, 49, 250)
-                    : trap
-                        ? new Color(155, 76, 61, 250)
-                        : village
-                            ? new Color(155, 135, 73, 250)
-                            : grassVariant;
+                const tileId = state.level.map[row]?.[col] ?? 0;
+                const fill = this.cellFill(row, col, tileId, state.level.moveObstacle);
                 const cell = createPanel(boardPanel, `Cell-${row}-${col}`, this.cellSize, this.cellSize, position.x, position.y, {
                     fill,
                     stroke: new Color(229, 231, 165, 76),
@@ -148,15 +141,19 @@ export class BoardView {
                 }
 
                 const terrain = trap ?? village;
-                if (terrain) {
+                if (this.options.editorMode && tileId !== 0) {
+                    this.createEditorCellArt(cell, tileId);
+                } else if (terrain) {
                     const frame = this.assets.forTile(terrain.id);
                     if (frame) createSprite(cell, `Terrain-${terrain.id}`, frame, this.cellSize * 0.9, this.cellSize * 0.9);
                 }
             }
         }
 
-        for (const entity of [...state.obstacles, ...state.sheep, ...state.wolves]) {
-            this.createActor(boardPanel, entity, state);
+        if (!this.options.editorMode) {
+            for (const entity of [...state.obstacles, ...state.sheep, ...state.wolves]) {
+                this.createActor(boardPanel, entity, state);
+            }
         }
         this.updateCameraPosition();
 
@@ -364,6 +361,40 @@ export class BoardView {
 
     public getCellSize(): number {
         return this.cellSize;
+    }
+
+    public updateEditorCell(row: number, col: number, id: number, state: GameState): void {
+        if (!this.options.editorMode) return;
+        this.state = state;
+        const cell = this.cellNodes.get(this.positionKey(row, col));
+        if (!cell) return;
+        cell.getChildByName('EditorCellArt')?.destroy();
+        const fill = this.cellFill(row, col, id, state.level.moveObstacle);
+        drawPanel(cell, this.cellSize, this.cellSize, {
+            fill,
+            stroke: new Color(229, 231, 165, 76),
+            lineWidth: 1,
+            radius: 1,
+        });
+        this.decorateCell(cell, row, col, fill);
+        if (id !== 0) this.createEditorCellArt(cell, id);
+    }
+
+    private createEditorCellArt(cell: Node, id: number): void {
+        const frame = this.assets.forTile(id);
+        if (!frame) return;
+        createSprite(cell, 'EditorCellArt', frame, this.cellSize * 0.9, this.cellSize * 0.9);
+    }
+
+    private cellFill(row: number, col: number, id: number, moveObstacle: number): Color {
+        const grassVariant = (row + col) % 2 === 0
+            ? new Color(126, 181, 91, 250)
+            : new Color(116, 170, 82, 250);
+        const kind = getTileKind(id);
+        if (kind === 'obstacle' && moveObstacle === 0) return new Color(116, 88, 49, 250);
+        if (kind === 'trap') return new Color(155, 76, 61, 250);
+        if (kind === 'village') return new Color(155, 135, 73, 250);
+        return grassVariant;
     }
 
     private createActor(parent: Node, entity: Entity, state: GameState): void {

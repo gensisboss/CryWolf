@@ -92,10 +92,27 @@ test('generated audio effects are valid imported PCM wave resources', () => {
     });
 });
 
-test('editor clears a selected tile by tapping the same role again without an eraser tool', () => {
+test('editor clears any occupied tile without an eraser tool or full board rebuild', () => {
     const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    const boardView = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'BoardView.ts'), 'utf8');
+    const editorPrefab = JSON.parse(fs.readFileSync(path.join(projectRoot, 'assets', 'resources', 'ui', 'UIEditor.prefab'), 'utf8'));
     assert.doesNotMatch(gameApp, /key:\s*'erase'/);
-    assert.match(gameApp, /current === this\.selectedEditorId \? 0 : this\.selectedEditorId/);
+    assert.match(gameApp, /const nextId = current === 0 \? this\.selectedEditorId : 0/);
+    assert.match(gameApp, /this\.board\?\.updateEditorCell\(row, col, nextId, state\)/);
+    assert.match(boardView, /public updateEditorCell\(/);
+    const eraseTab = editorPrefab.find((entry) => entry?._name === 'Tab-erase');
+    assert.equal(eraseTab?._active, false);
+});
+
+test('editor playtest preserves the campaign level and clears playtest state on home', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    const playtestMethod = gameApp.match(/private async playEditorLevel\(\): Promise<void> \{([\s\S]*?)\n    \}/)?.[1] ?? '';
+    assert.doesNotMatch(playtestMethod, /this\.currentLevel\s*=/);
+    assert.match(playtestMethod, /transitionToLevel\(this\.currentLevel\)/);
+    const homeMethod = gameApp.match(/private goHome\(\): void \{([\s\S]*?)\n    \}/)?.[1] ?? '';
+    assert.match(homeMethod, /this\.progressTracking = true/);
+    assert.match(homeMethod, /this\.playtestLevel = null/);
+    assert.match(homeMethod, /createInitialState\(this\.levels\[0\]\)/);
 });
 
 test('previous and undo buttons share next button canvas and SpriteFrame geometry', () => {
@@ -195,8 +212,8 @@ test('every level entry uses the cloud transition and only fixed obstacles have 
     );
     assert.match(gameApp, /private async resetLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async startMainGame\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
-    assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(0\)/);
-    assert.match(boardView, /obstacle && state\.level\.moveObstacle === 0/);
+    assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
+    assert.match(boardView, /kind === 'obstacle' && moveObstacle === 0/);
 });
 
 test('screen switches immediately deactivate the previous UI before deferred destruction', () => {

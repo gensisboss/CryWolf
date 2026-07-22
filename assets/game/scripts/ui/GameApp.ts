@@ -781,6 +781,7 @@ export class GameApp extends Component {
         this.board = new BoardView(boardHost, this.assets, {
             width: boardSize.width,
             height: boardSize.height,
+            editorMode: true,
             onCellPress: (row, col) => this.placeEditorTile(row, col),
         });
         this.renderEditorBoard();
@@ -938,8 +939,12 @@ export class GameApp extends Component {
     private placeEditorTile(row: number, col: number): void {
         this.sounds.play('click', 0.55);
         const current = this.editorMap[row]?.[col] ?? 0;
-        this.editorMap = placeTile(this.editorMap, row, col, current === this.selectedEditorId ? 0 : this.selectedEditorId);
-        this.renderEditorBoard();
+        const nextId = current === 0 ? this.selectedEditorId : 0;
+        this.editorMap = placeTile(this.editorMap, row, col, nextId);
+        const state = createInitialState(this.buildEditorLevel());
+        this.board?.updateEditorCell(row, col, nextId, state);
+        this.editorMessage = nextId === 0 ? '已清除当前格子' : '已放置角色';
+        this.updateEditorMessage();
     }
 
     private changeEditorGoal(delta: number): void {
@@ -978,9 +983,8 @@ export class GameApp extends Component {
         if (this.isMoving || this.isTransitioning) return;
         this.playtestLevel = this.buildEditorLevel();
         this.progressTracking = false;
-        this.currentLevel = 0;
         this.history = [];
-        await this.transitionToLevel(0);
+        await this.transitionToLevel(this.currentLevel);
     }
 
     private async saveEditorLevel(): Promise<void> {
