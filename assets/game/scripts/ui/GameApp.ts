@@ -134,6 +134,8 @@ export class GameApp extends Component {
     private selectedEditorId: number = SHEEP_IDS[0];
     private editorMessage = '选择下方素材，点击地图放置';
     private editorMessageLabel: Label | null = null;
+    private editorScreenRefreshScheduled = false;
+    private editorPaletteRefreshScheduled = false;
 
     public start(): void {
         void this.boot();
@@ -618,7 +620,7 @@ export class GameApp extends Component {
         bindButton(this.requireNode(top, 'ResizeMap'), () => this.updateEditorMessage());
         bindButton(this.requireNode(top, 'MoveObstacleToggle'), () => {
             this.editorMoveObstacle = this.editorMoveObstacle ? 0 : 1;
-            this.showEditorScreen();
+            this.scheduleEditorScreenRefresh();
         });
         bindButton(this.requireNode(top, 'ClearButton'), () => this.clearEditor());
         bindButton(this.requireNode(top, 'PlayButton'), () => void this.playEditorLevel());
@@ -640,7 +642,7 @@ export class GameApp extends Component {
                 this.selectedEditorGroup = group.key;
                 this.selectedEditorId = group.tools[0].id;
                 this.editorMessage = `已切换：${group.label}`;
-                this.refreshEditorPalette(bottom);
+                this.scheduleEditorPaletteRefresh(bottom);
             });
         });
         this.editorMessageLabel = this.requireLabel(this.requireNode(bottom, 'EditorMessage'));
@@ -649,10 +651,31 @@ export class GameApp extends Component {
     }
 
     private refreshEditorPalette(bottom: Node): void {
+        if (!bottom.isValid) return;
         const palette = this.requireNode(bottom, 'Palette');
         palette.removeAllChildren();
         this.buildEditorPalette(palette);
         this.updateEditorMessage();
+    }
+
+    private scheduleEditorPaletteRefresh(bottom: Node): void {
+        if (this.editorPaletteRefreshScheduled) return;
+        this.editorPaletteRefreshScheduled = true;
+        this.scheduleOnce(() => {
+            this.editorPaletteRefreshScheduled = false;
+            if (bottom.isValid && this.uiScreens.currentName === 'UIEditor') {
+                this.refreshEditorPalette(bottom);
+            }
+        });
+    }
+
+    private scheduleEditorScreenRefresh(): void {
+        if (this.editorScreenRefreshScheduled) return;
+        this.editorScreenRefreshScheduled = true;
+        this.scheduleOnce(() => {
+            this.editorScreenRefreshScheduled = false;
+            if (this.uiScreens.currentName === 'UIEditor') this.showEditorScreen();
+        });
     }
 
     private renderEditorBoard(): void {
@@ -682,7 +705,7 @@ export class GameApp extends Component {
             bindButton(slot, () => {
                 this.selectedEditorId = tool.id;
                 this.editorMessage = tool.id ? `已选择：${tool.label}` : '已选择：擦除';
-                if (parent.parent) this.refreshEditorPalette(parent.parent);
+                if (parent.parent) this.scheduleEditorPaletteRefresh(parent.parent);
             });
         });
     }
@@ -701,7 +724,7 @@ export class GameApp extends Component {
     private changeEditorGoal(delta: number): void {
         this.editorGoal = Math.min(10, Math.max(1, this.editorGoal + delta));
         this.editorMessage = `逃离目标：${this.editorGoal}`;
-        this.showEditorScreen();
+        this.scheduleEditorScreenRefresh();
     }
 
     private changeEditorSize(rowDelta: number, colDelta: number): void {
@@ -712,7 +735,7 @@ export class GameApp extends Component {
         this.editorCols = cols;
         this.editorMap = resizeMap(this.editorMap, rows, cols);
         this.editorMessage = `已生成 ${rows} 行 × ${cols} 列地图`;
-        this.showEditorScreen();
+        this.scheduleEditorScreenRefresh();
     }
 
     private clearEditor(): void {

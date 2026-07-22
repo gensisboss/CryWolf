@@ -108,10 +108,18 @@ test('editor tool switching preserves the board instance and only refreshes the 
     const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
     const tabBinding = gameApp.match(/EDITOR_GROUPS\.forEach\(\(group\) => \{([\s\S]*?)\n        \}\);/)?.[1] ?? '';
     const paletteBinding = gameApp.match(/private buildEditorPalette\(parent: Node\): void \{([\s\S]*?)\n    \}/)?.[1] ?? '';
-    assert.match(tabBinding, /this\.refreshEditorPalette\(bottom\)/);
+    assert.match(tabBinding, /this\.scheduleEditorPaletteRefresh\(bottom\)/);
     assert.doesNotMatch(tabBinding, /this\.showEditorScreen\(\)/);
-    assert.match(paletteBinding, /this\.refreshEditorPalette\(/);
+    assert.match(paletteBinding, /this\.scheduleEditorPaletteRefresh\(/);
     assert.doesNotMatch(paletteBinding, /this\.showEditorScreen\(\)/);
+});
+
+test('editor node replacement is deferred until after touch event dispatch', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    assert.match(gameApp, /private scheduleEditorPaletteRefresh\(bottom: Node\): void[\s\S]*this\.scheduleOnce\(\(\) =>/);
+    assert.match(gameApp, /private scheduleEditorScreenRefresh\(\): void[\s\S]*this\.scheduleOnce\(\(\) =>/);
+    assert.match(gameApp, /private changeEditorSize[\s\S]*this\.scheduleEditorScreenRefresh\(\)/);
+    assert.match(gameApp, /private changeEditorGoal[\s\S]*this\.scheduleEditorScreenRefresh\(\)/);
 });
 
 test('board uses its full-map base without generating an extra viewport background', () => {
