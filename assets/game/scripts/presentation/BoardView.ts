@@ -13,7 +13,7 @@ import {
 import { getTileKind } from '../domain/EntityCatalog';
 import { Direction, Entity, GameState, TurnResolution } from '../domain/GameTypes';
 import { AssetCatalog } from './AssetCatalog';
-import { createCoverSprite, createPanel, createSprite, createUiNode, drawPanel } from '../ui/UiFactory';
+import { createPanel, createSprite, createUiNode, drawPanel } from '../ui/UiFactory';
 import { SlideMinimapView } from './SlideMinimapView';
 import { chooseFollowSheep, clampViewport, positionAlongMovement, viewportAround, viewportAroundContinuous, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
 
@@ -47,7 +47,6 @@ export class BoardView {
         private readonly options: BoardViewOptions,
     ) {
         this.frame = createUiNode(parent, 'BoardFrame', options.width, options.height);
-        createCoverSprite(this.frame, 'MapBackground', assets.get('mapBackground'), options.width, options.height);
         this.border = createUiNode(this.frame, 'BoardFrameBorder', options.width, options.height);
         drawPanel(this.border, options.width - 2, options.height - 2, {
             fill: new Color(255, 255, 255, 34),

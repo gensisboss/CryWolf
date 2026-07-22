@@ -104,6 +104,24 @@ test('editor clears any occupied tile without an eraser tool or full board rebui
     assert.equal(eraseTab?._active, false);
 });
 
+test('editor tool switching preserves the board instance and only refreshes the palette', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    const tabBinding = gameApp.match(/EDITOR_GROUPS\.forEach\(\(group\) => \{([\s\S]*?)\n        \}\);/)?.[1] ?? '';
+    const paletteBinding = gameApp.match(/private buildEditorPalette\(parent: Node\): void \{([\s\S]*?)\n    \}/)?.[1] ?? '';
+    assert.match(tabBinding, /this\.refreshEditorPalette\(bottom\)/);
+    assert.doesNotMatch(tabBinding, /this\.showEditorScreen\(\)/);
+    assert.match(paletteBinding, /this\.refreshEditorPalette\(/);
+    assert.doesNotMatch(paletteBinding, /this\.showEditorScreen\(\)/);
+});
+
+test('board uses its full-map base without generating an extra viewport background', () => {
+    const boardView = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'BoardView.ts'), 'utf8');
+    const assetCatalog = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'presentation', 'AssetCatalog.ts'), 'utf8');
+    assert.match(boardView, /createPanel\(boardPanel, 'MapBase', mapWidth, mapHeight/);
+    assert.doesNotMatch(boardView, /MapBackground|assets\.get\('mapBackground'\)/);
+    assert.doesNotMatch(assetCatalog, /mapBackground:\s*'map-down-bg'/);
+});
+
 test('editor playtest preserves the campaign level and clears playtest state on home', () => {
     const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
     const playtestMethod = gameApp.match(/private async playEditorLevel\(\): Promise<void> \{([\s\S]*?)\n    \}/)?.[1] ?? '';

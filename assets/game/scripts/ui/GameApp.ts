@@ -639,13 +639,19 @@ export class GameApp extends Component {
             bindButton(this.requireNode(tabs, `Tab-${group.key}`), () => {
                 this.selectedEditorGroup = group.key;
                 this.selectedEditorId = group.tools[0].id;
-                this.showEditorScreen();
+                this.editorMessage = `已切换：${group.label}`;
+                this.refreshEditorPalette(bottom);
             });
         });
+        this.editorMessageLabel = this.requireLabel(this.requireNode(bottom, 'EditorMessage'));
+        this.refreshEditorPalette(bottom);
+        this.updateEditorMessage();
+    }
+
+    private refreshEditorPalette(bottom: Node): void {
         const palette = this.requireNode(bottom, 'Palette');
         palette.removeAllChildren();
         this.buildEditorPalette(palette);
-        this.editorMessageLabel = this.requireLabel(this.requireNode(bottom, 'EditorMessage'));
         this.updateEditorMessage();
     }
 
@@ -676,7 +682,7 @@ export class GameApp extends Component {
             bindButton(slot, () => {
                 this.selectedEditorId = tool.id;
                 this.editorMessage = tool.id ? `已选择：${tool.label}` : '已选择：擦除';
-                this.showEditorScreen();
+                if (parent.parent) this.refreshEditorPalette(parent.parent);
             });
         });
     }

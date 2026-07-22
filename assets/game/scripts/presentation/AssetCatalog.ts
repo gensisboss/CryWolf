@@ -3,7 +3,6 @@ import { getTileKind, getVariantIndex } from '../domain/EntityCatalog';
 
 const FILES = {
     mainBackground: 'main-bg',
-    mapBackground: 'map-down-bg',
     cloud: 'cloud-panel',
     hero: 'hero-main',
     guideGrandpa: 'guide-grandpa',
