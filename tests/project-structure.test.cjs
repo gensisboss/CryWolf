@@ -239,6 +239,14 @@ test('screen switches immediately deactivate the previous UI before deferred des
     assert.match(manager, /this\.current\.active = false;\s*this\.current\.destroy\(\);/);
 });
 
+test('legacy runtime-built screens and their dynamic screen entry point are removed', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    const screenManager = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'UiScreenManager.ts'), 'utf8');
+    assert.doesNotMatch(gameApp, /buildGameScreenLegacy|showResultModalLegacy|showEditorScreenLegacy|createStatusBox|beginScreen/);
+    assert.doesNotMatch(screenManager, /public show\(/);
+    assert.doesNotMatch(screenManager, /createUiNode/);
+});
+
 test('game and editor prefabs leave generated board scenes empty', () => {
     ['UIGame', 'UIEditor'].forEach((name) => {
         const prefab = JSON.parse(fs.readFileSync(

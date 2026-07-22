@@ -1,18 +1,9 @@
 import { instantiate, Node, Prefab, UITransform } from 'cc';
-import { createUiNode } from './UiFactory';
-
-export type ScreenName = 'UIMain' | 'UIGame' | 'UIEditor';
 
 export class UiScreenManager {
     private current: Node | null = null;
 
     public constructor(private readonly parent: Node) {}
-
-    public show(name: ScreenName, width: number, height: number): Node {
-        this.close();
-        this.current = createUiNode(this.parent, name, width, height);
-        return this.current;
-    }
 
     public showPrefab(prefab: Prefab, width: number, height: number): Node {
         this.close();

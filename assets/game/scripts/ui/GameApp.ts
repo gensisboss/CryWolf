@@ -6,7 +6,6 @@ import {
     EventTouch,
     instantiate,
     Label,
-    Mask,
     Node,
     Prefab,
     profiler,
@@ -39,16 +38,13 @@ import { BoardView } from '../presentation/BoardView';
 import { ProgressStore } from '../storage/ProgressStore';
 import {
     bindButton,
-    createCoverSprite,
     createLabel,
     createPanel,
     createSprite,
-    createSpriteButton,
-    createTextButton,
     createUiNode,
     drawPanel,
 } from './UiFactory';
-import { ScreenName, UiScreenManager } from './UiScreenManager';
+import { UiScreenManager } from './UiScreenManager';
 import { SoundManager } from './SoundManager';
 import { LoadingTransition } from './LoadingTransition';
 
@@ -106,8 +102,6 @@ export class GameApp extends Component {
     private guideRoot: Node | null = null;
     private screenWidth = 430;
     private screenHeight = 760;
-    private frameWidth = 406;
-    private frameHeight = 740;
 
     private levels: LevelDefinition[] = [];
     private guides: GuideDefinition[] = [];
@@ -197,8 +191,6 @@ export class GameApp extends Component {
         const visible = view.getVisibleSize();
         this.screenWidth = visible.width / UI_SCALE;
         this.screenHeight = visible.height / UI_SCALE;
-        this.frameWidth = Math.min(406, this.screenWidth - 20);
-        this.frameHeight = Math.min(740, this.screenHeight - 20);
     }
 
     private handleCanvasResize(): void {
@@ -266,11 +258,6 @@ export class GameApp extends Component {
         const label = node.getComponent(Label) ?? node.getChildByName('Label')?.getComponent(Label);
         if (!label) throw new Error(`Prefab node ${node.name} is missing Label`);
         return label;
-    }
-
-    private beginScreen(name: ScreenName): Node {
-        const prefabs = { UIMain: this.uiMainPrefab, UIGame: this.uiGamePrefab, UIEditor: this.uiEditorPrefab };
-        return this.showScreenPrefab(prefabs[name], name);
     }
 
     private showStartScreen(): void {
@@ -343,130 +330,6 @@ export class GameApp extends Component {
         this.messageLabel = this.requireLabel(this.requireNode(bottom, 'MessageBar'));
         this.updateHud();
         this.updateUndoButton();
-    }
-
-    private buildGameScreenLegacy(): void {
-        if (!this.state) return;
-        const frame = this.beginScreen('UIGame');
-        const topWidth = this.frameWidth - 20;
-        const topY = this.frameHeight / 2 - 40;
-        const topPanel = createPanel(frame, 'TopPanel', topWidth, 56, 0, topY, {
-            fill: new Color(245, 218, 151, 238),
-            stroke: new Color(90, 62, 26, 225),
-            lineWidth: 3,
-            radius: 8,
-        });
-        createSpriteButton(
-            topPanel,
-            'HomeButton',
-            this.assets.get('homeButton'),
-            38,
-            40,
-            -topWidth / 2 + 25,
-            0,
-            () => this.goHome(),
-        );
-        createSpriteButton(
-            topPanel,
-            'ReplayButton',
-            this.assets.get('replayButton'),
-            38,
-            40,
-            topWidth / 2 - 24,
-            0,
-            () => void this.resetLevel(),
-        );
-
-        if (this.progressTracking) {
-            createSpriteButton(
-                topPanel,
-                'NextLevelButton',
-                this.assets.get('nextButton'),
-                70,
-                40,
-                topWidth / 2 - 82,
-                0,
-                () => void this.goNextLevel(),
-            );
-            createSpriteButton(
-                topPanel,
-                'PreviousLevelButton',
-                this.assets.get('previousButton'),
-                70,
-                40,
-                topWidth / 2 - 156,
-                0,
-                () => void this.goPreviousLevel(),
-            );
-        } else {
-            this.undoButton = createSpriteButton(
-                topPanel,
-                'UndoButton',
-                this.assets.get('undoButton'),
-                70,
-                40,
-                topWidth / 2 - 82,
-                0,
-                () => void this.undoPlaytestMove(),
-            );
-        }
-
-        const seasonY = this.frameHeight / 2 - 88;
-        const season = createPanel(frame, 'SeasonBar', topWidth, 34, 0, seasonY, {
-            fill: new Color(49, 83, 47, 225),
-            stroke: new Color(255, 239, 169, 190),
-            lineWidth: 2,
-            radius: 17,
-        });
-        createLabel(season, 'LevelNumber', this.progressTracking ? `第 ${this.currentLevel + 1} 关` : '关卡试玩', 110, 30, 16, new Color(255, 248, 215), -topWidth / 2 + 66, 0);
-        createLabel(season, 'LevelTitle', this.state.level.title ?? '自定义关卡', 190, 30, 16, new Color(255, 248, 215), topWidth / 2 - 104, 0);
-
-        const boardTop = this.frameHeight / 2 - 112;
-        const boardBottom = -this.frameHeight / 2 + 104;
-        const boardHeight = boardTop - boardBottom;
-        const boardHost = createUiNode(frame, 'BoardHost', this.frameWidth - 20, boardHeight, 0, (boardTop + boardBottom) / 2);
-        this.board = new BoardView(boardHost, this.assets, {
-            width: this.frameWidth - 20,
-            height: boardHeight,
-            onSwipe: (direction) => void this.move(direction),
-        });
-        this.board.render(this.state);
-
-        const statusY = -this.frameHeight / 2 + 73;
-        const statusGap = 8;
-        const statusWidth = (topWidth - statusGap * 2) / 3;
-        this.sheepLabel = this.createStatusBox(frame, 'SheepStatus', '小羊', statusWidth, -statusWidth - statusGap, statusY, false);
-        this.goalLabel = this.createStatusBox(frame, 'GoalStatus', '进楼', statusWidth, 0, statusY, true);
-        this.wolfLabel = this.createStatusBox(frame, 'WolfStatus', '野狼', statusWidth, statusWidth + statusGap, statusY, false);
-        const messagePanel = createPanel(frame, 'MessageBar', topWidth, 34, 0, -this.frameHeight / 2 + 25, {
-            fill: new Color(48, 67, 39, 220),
-            stroke: new Color(255, 238, 165, 170),
-            lineWidth: 2,
-            radius: 17,
-        });
-        this.messageLabel = createLabel(messagePanel, 'Message', '滑动屏幕，护送小羊逃进羊村', topWidth - 18, 30, 15, new Color(255, 246, 208));
-        this.updateHud();
-        this.updateUndoButton();
-    }
-
-    private createStatusBox(
-        parent: Node,
-        name: string,
-        caption: string,
-        width: number,
-        x: number,
-        y: number,
-        goal: boolean,
-    ): Label {
-        const panel = createPanel(parent, name, width, 50, x, y, {
-            fill: goal ? new Color(84, 120, 62, 238) : new Color(244, 214, 145, 238),
-            stroke: new Color(91, 61, 24, 220),
-            lineWidth: 2,
-            radius: 8,
-        });
-        const color = goal ? new Color(255, 246, 216) : new Color(78, 52, 23);
-        createLabel(panel, `${name}Caption`, caption, width - 8, 18, 12, color, 0, 12);
-        return createLabel(panel, `${name}Value`, '0', width - 8, 24, 18, color, 0, -9);
     }
 
     private updateHud(): void {
@@ -602,29 +465,6 @@ export class GameApp extends Component {
         const next = this.requireNode(panel, 'ModalNext');
         next.active = showNext;
         if (showNext) bindButton(next, () => void this.goNextLevel());
-    }
-
-    private showResultModalLegacy(title: string, message: string, showNext: boolean): void {
-        this.closeModal();
-        this.modalRoot = createUiNode(this.runtimeRoot, 'ResultModal', this.screenWidth, this.screenHeight);
-        createPanel(this.modalRoot, 'ModalShade', this.screenWidth, this.screenHeight, 0, 0, {
-            fill: new Color(31, 47, 29, 155),
-        });
-        const panel = createPanel(this.modalRoot, 'ModalPanel', 330, 270, 0, 0, {
-            fill: new Color(241, 213, 154, 252),
-            stroke: new Color(78, 55, 24, 235),
-            lineWidth: 4,
-            radius: 10,
-        });
-        createSprite(panel, 'ModalHero', this.assets.get('hero'), 112, 112, 0, 74);
-        createLabel(panel, 'ModalTitle', title, 290, 40, 27, new Color(61, 42, 21), 0, 16);
-        createLabel(panel, 'ModalMessage', message, 284, 66, 16, new Color(94, 64, 29), 0, -34);
-        const actionsY = -99;
-        createSpriteButton(panel, 'ModalHome', this.assets.get('homeButton'), 48, 50, showNext ? -80 : -35, actionsY, () => this.goHome());
-        createSpriteButton(panel, 'ModalReplay', this.assets.get('replayButton'), 48, 50, showNext ? -18 : 35, actionsY, () => void this.resetLevel());
-        if (showNext) {
-            createSpriteButton(panel, 'ModalNext', this.assets.get('nextButton'), 86, 50, 72, actionsY, () => void this.goNextLevel());
-        }
     }
 
     private closeModal(): void {
@@ -807,109 +647,6 @@ export class GameApp extends Component {
         this.buildEditorPalette(palette);
         this.editorMessageLabel = this.requireLabel(this.requireNode(bottom, 'EditorMessage'));
         this.updateEditorMessage();
-    }
-
-    private showEditorScreenLegacy(): void {
-        if (this.isMoving || this.isTransitioning) return;
-        const frame = this.beginScreen('UIEditor');
-        const contentWidth = this.frameWidth - 20;
-        const topY = this.frameHeight / 2 - 40;
-        const top = createPanel(frame, 'EditorTopPanel', contentWidth, 56, 0, topY, {
-            fill: new Color(245, 218, 151, 238),
-            stroke: new Color(90, 62, 26, 225),
-            lineWidth: 3,
-            radius: 8,
-        });
-        createSpriteButton(top, 'EditorHome', this.assets.get('homeButton'), 38, 40, -contentWidth / 2 + 25, 0, () => this.showStartScreen());
-        createLabel(top, 'EditorTitle', '编辑关卡', 96, 38, 19, new Color(78, 52, 23), -91, 0);
-        createLabel(top, 'EditorGoal', `逃离 ${this.editorGoal}`, 62, 32, 14, new Color(78, 52, 23), 4, 0);
-        createTextButton(top, 'GoalMinus', '-', 28, 30, 52, 0, () => this.changeEditorGoal(-1));
-        createTextButton(top, 'GoalPlus', '+', 28, 30, 84, 0, () => this.changeEditorGoal(1));
-        createTextButton(
-            top,
-            'MoveObstacleToggle',
-            this.editorMoveObstacle ? '障碍 开' : '障碍 关',
-            72,
-            32,
-            137,
-            0,
-            () => {
-                this.editorMoveObstacle = this.editorMoveObstacle ? 0 : 1;
-                this.editorMessage = this.editorMoveObstacle ? '障碍会跟随滑动' : '障碍保持固定';
-                this.showEditorScreen();
-            },
-            this.editorMoveObstacle === 1,
-        );
-
-        const sizeY = this.frameHeight / 2 - 91;
-        const sizeBar = createPanel(frame, 'EditorSizeBar', contentWidth, 40, 0, sizeY, {
-            fill: new Color(48, 67, 39, 210),
-            stroke: new Color(255, 238, 165, 120),
-            lineWidth: 2,
-            radius: 8,
-        });
-        createLabel(sizeBar, 'RowsLabel', `行 ${this.editorRows}`, 45, 28, 14, new Color(255, 246, 208), -145, 0);
-        createTextButton(sizeBar, 'RowsMinus', '-', 28, 28, -108, 0, () => this.changeEditorSize(-1, 0));
-        createTextButton(sizeBar, 'RowsPlus', '+', 28, 28, -76, 0, () => this.changeEditorSize(1, 0));
-        createLabel(sizeBar, 'ColsLabel', `列 ${this.editorCols}`, 45, 28, 14, new Color(255, 246, 208), -26, 0);
-        createTextButton(sizeBar, 'ColsMinus', '-', 28, 28, 10, 0, () => this.changeEditorSize(0, -1));
-        createTextButton(sizeBar, 'ColsPlus', '+', 28, 28, 42, 0, () => this.changeEditorSize(0, 1));
-        createTextButton(sizeBar, 'ResizeMap', '生成地图', 86, 30, 122, 0, () => {
-            this.editorMessage = `已生成 ${this.editorRows} 行 × ${this.editorCols} 列地图`;
-            this.updateEditorMessage();
-        }, true);
-
-        const actionY = this.frameHeight / 2 - 134;
-        const actionWidth = (contentWidth - 12) / 3;
-        createTextButton(frame, 'EditorClear', '清空', actionWidth, 36, -actionWidth - 6, actionY, () => this.clearEditor());
-        createTextButton(frame, 'EditorPlay', '试玩', actionWidth, 36, 0, actionY, () => void this.playEditorLevel());
-        createTextButton(frame, 'EditorSave', '保存', actionWidth, 36, actionWidth + 6, actionY, () => void this.saveEditorLevel(), true);
-
-        const tabsY = -this.frameHeight / 2 + 122;
-        const paletteY = -this.frameHeight / 2 + 79;
-        const messageY = -this.frameHeight / 2 + 25;
-        const boardTop = this.frameHeight / 2 - 158;
-        const boardBottom = -this.frameHeight / 2 + 146;
-        const boardHeight = boardTop - boardBottom;
-        const boardHost = createUiNode(frame, 'EditorBoardHost', contentWidth, boardHeight, 0, (boardTop + boardBottom) / 2);
-        this.board = new BoardView(boardHost, this.assets, {
-            width: contentWidth,
-            height: boardHeight,
-            onCellPress: (row, col) => this.placeEditorTile(row, col),
-        });
-        this.renderEditorBoard();
-
-        const tabs = createPanel(frame, 'EditorTabs', contentWidth, 34, 0, tabsY, {
-            fill: new Color(48, 67, 39, 215),
-            stroke: new Color(255, 238, 165, 125),
-            lineWidth: 2,
-            radius: 8,
-        });
-        const tabWidth = (contentWidth - 10) / EDITOR_GROUPS.length;
-        EDITOR_GROUPS.forEach((group, index) => {
-            const x = -contentWidth / 2 + 5 + tabWidth / 2 + index * tabWidth;
-            createTextButton(tabs, `Tab-${group.key}`, group.label, tabWidth - 3, 26, x, 0, () => {
-                this.selectedEditorGroup = group.key;
-                this.selectedEditorId = group.tools[0].id;
-                this.editorMessage = `已切换：${group.label}`;
-                this.showEditorScreen();
-            }, this.selectedEditorGroup === group.key);
-        });
-
-        const palette = createPanel(frame, 'EditorPalette', contentWidth, 52, 0, paletteY, {
-            fill: new Color(48, 67, 39, 220),
-            stroke: new Color(255, 238, 165, 150),
-            lineWidth: 2,
-            radius: 8,
-        });
-        this.buildEditorPalette(palette);
-        const message = createPanel(frame, 'EditorMessageBar', contentWidth, 34, 0, messageY, {
-            fill: new Color(48, 67, 39, 220),
-            stroke: new Color(255, 238, 165, 150),
-            lineWidth: 2,
-            radius: 8,
-        });
-        this.editorMessageLabel = createLabel(message, 'EditorMessage', this.editorMessage, contentWidth - 16, 28, 14, new Color(255, 246, 208));
     }
 
     private renderEditorBoard(): void {
