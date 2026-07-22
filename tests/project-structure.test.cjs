@@ -214,6 +214,8 @@ test('every level entry uses the cloud transition and only fixed obstacles have 
     assert.match(gameApp, /private async startMainGame\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(boardView, /kind === 'obstacle' && moveObstacle === 0/);
+    assert.match(boardView, /obstacle\?\.id \?\? trap\?\.id \?\? village\?\.id \?\? 0/);
+    assert.doesNotMatch(boardView, /const tileId = state\.level\.map\[row\]\?\.\[col\] \?\? 0/);
 });
 
 test('screen switches immediately deactivate the previous UI before deferred destruction', () => {

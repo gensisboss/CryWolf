@@ -123,7 +123,9 @@ export class BoardView {
                 const trap = trapByCell.get(key);
                 const village = villageByCell.get(key);
                 const position = this.positionFor(row, col, state);
-                const tileId = state.level.map[row]?.[col] ?? 0;
+                const tileId = this.options.editorMode
+                    ? state.level.map[row]?.[col] ?? 0
+                    : obstacle?.id ?? trap?.id ?? village?.id ?? 0;
                 const fill = this.cellFill(row, col, tileId, state.level.moveObstacle);
                 const cell = createPanel(boardPanel, `Cell-${row}-${col}`, this.cellSize, this.cellSize, position.x, position.y, {
                     fill,
