@@ -112,7 +112,20 @@ test('editor playtest preserves the campaign level and clears playtest state on 
     const homeMethod = gameApp.match(/private goHome\(\): void \{([\s\S]*?)\n    \}/)?.[1] ?? '';
     assert.match(homeMethod, /this\.progressTracking = true/);
     assert.match(homeMethod, /this\.playtestLevel = null/);
-    assert.match(homeMethod, /createInitialState\(this\.levels\[0\]\)/);
+    assert.match(homeMethod, /this\.currentLevel = this\.resumeLevelIndex\(\)/);
+    assert.match(homeMethod, /createInitialState\(this\.levels\[this\.currentLevel\]\)/);
+});
+
+test('campaign resumes from the highest completed level and persists completion count', () => {
+    const gameApp = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'), 'utf8');
+    const progressStore = fs.readFileSync(path.join(projectRoot, 'assets', 'game', 'scripts', 'storage', 'ProgressStore.ts'), 'utf8');
+    assert.match(progressStore, /loadMaxCompletedLevels\(\)/);
+    assert.match(progressStore, /saveMaxCompletedLevels\(count: number\)/);
+    assert.match(progressStore, /return this\.loadMaxUnlockedLevel\(\)/);
+    assert.match(gameApp, /this\.maxCompletedLevels = Math\.min\(this\.store\.loadMaxCompletedLevels\(\), this\.levels\.length\)/);
+    assert.match(gameApp, /private resumeLevelIndex\(\): number/);
+    assert.match(gameApp, /this\.currentLevel = this\.resumeLevelIndex\(\)/);
+    assert.match(gameApp, /this\.store\.saveMaxCompletedLevels\(this\.maxCompletedLevels\)/);
 });
 
 test('previous and undo buttons share next button canvas and SpriteFrame geometry', () => {

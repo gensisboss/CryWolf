@@ -8,6 +8,7 @@ interface KeyValueStorage {
 }
 
 const PROGRESS_KEY = 'slideweb-max-unlocked-level';
+const COMPLETED_LEVELS_KEY = 'crywolf-max-completed-levels';
 const GUIDE_KEY = 'slideweb-guide-seen-levels';
 const CUSTOM_LEVEL_KEY = 'crywolf-custom-level';
 
@@ -26,6 +27,29 @@ export class ProgressStore {
     public saveMaxUnlockedLevel(levelIndex: number): void {
         try {
             this.storage.setItem(PROGRESS_KEY, String(Math.max(0, Math.floor(levelIndex))));
+        } catch {
+            // Platform storage may be unavailable in preview or private mode.
+        }
+    }
+
+    public loadMaxCompletedLevels(): number {
+        try {
+            const saved = this.storage.getItem(COMPLETED_LEVELS_KEY);
+            if (saved !== null) {
+                const value = Number(saved);
+                return Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+            }
+
+            // The legacy unlocked index equals the number of levels already completed.
+            return this.loadMaxUnlockedLevel();
+        } catch {
+            return 0;
+        }
+    }
+
+    public saveMaxCompletedLevels(count: number): void {
+        try {
+            this.storage.setItem(COMPLETED_LEVELS_KEY, String(Math.max(0, Math.floor(count))));
         } catch {
             // Platform storage may be unavailable in preview or private mode.
         }

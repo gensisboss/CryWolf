@@ -113,6 +113,7 @@ export class GameApp extends Component {
     private guides: GuideDefinition[] = [];
     private currentLevel = 0;
     private maxUnlockedLevel = 0;
+    private maxCompletedLevels = 0;
     private seenGuideLevels = new Set<number>();
     private state: GameState | null = null;
     private playtestLevel: LevelDefinition | null = null;
@@ -173,9 +174,11 @@ export class GameApp extends Component {
                 this.guides = guides;
                 if (this.levels.length === 0) throw new Error('No playable levels found');
 
-                this.maxUnlockedLevel = Math.min(this.store.loadMaxUnlockedLevel(), this.levels.length - 1);
+                this.maxCompletedLevels = Math.min(this.store.loadMaxCompletedLevels(), this.levels.length);
+                this.maxUnlockedLevel = Math.min(this.maxCompletedLevels, this.levels.length - 1);
+                this.currentLevel = this.resumeLevelIndex();
                 this.seenGuideLevels = this.store.loadSeenGuideLevels();
-                this.state = createInitialState(this.levels[0]);
+                this.state = createInitialState(this.levels[this.currentLevel]);
                 this.loadSavedEditorLevel();
                 this.showStartScreen();
                 this.sounds.playMusic();
@@ -289,8 +292,12 @@ export class GameApp extends Component {
         if (this.isTransitioning || this.levels.length === 0) return;
         this.progressTracking = true;
         this.playtestLevel = null;
-        this.currentLevel = Math.min(this.currentLevel, this.levels.length - 1);
+        this.currentLevel = this.resumeLevelIndex();
         await this.transitionToLevel(this.currentLevel);
+    }
+
+    private resumeLevelIndex(): number {
+        return Math.min(this.maxCompletedLevels, Math.max(0, this.levels.length - 1));
     }
 
     private buildGameScreen(): void {
@@ -505,7 +512,7 @@ export class GameApp extends Component {
         if (this.state.status === 'win') {
             this.sounds.play('win', 0.9);
             this.setMessage('成功，小羊已逃进羊村');
-            if (this.progressTracking) this.unlockNextLevel();
+            if (this.progressTracking) this.recordCompletedLevel();
             const isLast = this.progressTracking && this.currentLevel >= this.levels.length - 1;
             this.showResultModal(
                 isLast ? '狼来了通关' : '逃跑成功',
@@ -522,11 +529,12 @@ export class GameApp extends Component {
         this.updateUndoButton();
     }
 
-    private unlockNextLevel(): void {
-        const unlocked = Math.min(this.currentLevel + 1, this.levels.length - 1);
-        if (unlocked <= this.maxUnlockedLevel) return;
-        this.maxUnlockedLevel = unlocked;
-        this.store.saveMaxUnlockedLevel(this.maxUnlockedLevel);
+    private recordCompletedLevel(): void {
+        const completed = Math.min(this.currentLevel + 1, this.levels.length);
+        if (completed <= this.maxCompletedLevels) return;
+        this.maxCompletedLevels = completed;
+        this.maxUnlockedLevel = Math.min(completed, this.levels.length - 1);
+        this.store.saveMaxCompletedLevels(this.maxCompletedLevels);
     }
 
     private async resetLevel(): Promise<void> {
@@ -631,10 +639,10 @@ export class GameApp extends Component {
         if (this.isMoving || this.isTransitioning) return;
         this.closeModal();
         this.closeGuide(false);
-        this.currentLevel = 0;
         this.progressTracking = true;
         this.playtestLevel = null;
-        this.state = createInitialState(this.levels[0]);
+        this.currentLevel = this.resumeLevelIndex();
+        this.state = createInitialState(this.levels[this.currentLevel]);
         this.showStartScreen();
     }
 
