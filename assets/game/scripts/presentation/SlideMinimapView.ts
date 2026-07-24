@@ -3,6 +3,14 @@ import { GameState } from '../domain/GameTypes';
 import { createUiNode } from '../ui/UiFactory';
 import { clampViewport, ViewportOrigin, VIEWPORT_SIZE } from '../domain/ViewportRules';
 
+const MINIMAP_COLORS = {
+    sheep: new Color(255, 255, 255, 255),
+    wolf: new Color(150, 150, 150, 255),
+    trap: new Color(224, 57, 50, 255),
+    obstacle: new Color(125, 82, 42, 255),
+    village: new Color(255, 222, 78, 255),
+};
+
 export class SlideMinimapView {
     private readonly graphics: Graphics;
 
@@ -59,9 +67,11 @@ export class SlideMinimapView {
             g.rect(left + col * cellWidth, bottom + (this.state.rows - row - 1) * cellHeight, size, size);
             g.fill();
         };
-        this.state.villages.forEach((item) => dot(item.row, item.col, new Color(255, 222, 125), 1.4));
-        this.state.wolves.forEach((item) => dot(item.row, item.col, new Color(115, 57, 48), 1.5));
-        this.state.sheep.forEach((item) => dot(item.row, item.col, new Color(255, 249, 220), 1.7));
+        this.state.obstacles.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.obstacle, 1.4));
+        this.state.traps.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.trap, 1.4));
+        this.state.villages.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.village, 1.4));
+        this.state.wolves.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.wolf, 1.5));
+        this.state.sheep.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.sheep, 1.7));
 
         const visibleCols = Math.min(VIEWPORT_SIZE, this.state.cols);
         const visibleRows = Math.min(VIEWPORT_SIZE, this.state.rows);
