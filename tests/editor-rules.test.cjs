@@ -32,7 +32,7 @@ test('editor and imported maps are limited to twenty by twenty', () => {
     assert.deepEqual(normalizeLevels([{ goal: 1, map: oversized }]), []);
 });
 
-test('level normalization preserves title, goal, map, and obstacle movement', () => {
+test('level normalization migrates legacy moving obstacles to boxes', () => {
     const levels = normalizeLevels({
         levels: [{ title: '木箱开路', goal: 2, moveObstacle: 1, map: [[10, 50], [11, 30]] }],
     });
@@ -40,8 +40,8 @@ test('level normalization preserves title, goal, map, and obstacle movement', ()
     assert.deepEqual(levels, [{
         title: '木箱开路',
         goal: 2,
-        moveObstacle: 1,
-        map: [[10, 50], [11, 30]],
+        moveObstacle: 0,
+        map: [[10, 50], [11, 60]],
     }]);
 });
 
@@ -55,7 +55,7 @@ test('editor exports one UTF-8 playable level object', () => {
     assert.equal(exportLevelJson(value), JSON.stringify({
         title: '自定义关卡',
         goal: 1,
-        moveObstacle: 1,
+        moveObstacle: 0,
         map: [[10, 50]],
     }, null, 2));
 });

@@ -1,6 +1,6 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-export type EntityKind = 'sheep' | 'wolf' | 'obstacle';
+export type EntityKind = 'sheep' | 'wolf' | 'obstacle' | 'box';
 
 export type GameStatus = 'playing' | 'win' | 'lose';
 
@@ -41,6 +41,7 @@ export interface GameState {
     sheep: Entity[];
     wolves: Entity[];
     obstacles: Entity[];
+    boxes: Entity[];
     villages: StaticEntity[];
     traps: StaticEntity[];
     status: GameStatus;

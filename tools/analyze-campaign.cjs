@@ -11,6 +11,7 @@ function stateKey(state) {
         entities(state.sheep),
         entities(state.wolves),
         entities(state.obstacles),
+        entities(state.boxes),
         state.traps.map((item) => `${item.row},${item.col}`).sort().join('|'),
     ].join(';');
 }

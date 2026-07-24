@@ -8,6 +8,7 @@ const MINIMAP_COLORS = {
     wolf: new Color(150, 150, 150, 255),
     trap: new Color(224, 57, 50, 255),
     obstacle: new Color(125, 82, 42, 255),
+    box: new Color(190, 128, 58, 255),
     village: new Color(255, 222, 78, 255),
 };
 
@@ -68,6 +69,7 @@ export class SlideMinimapView {
             g.fill();
         };
         this.state.obstacles.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.obstacle, 1.4));
+        this.state.boxes.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.box, 1.4));
         this.state.traps.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.trap, 1.4));
         this.state.villages.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.village, 1.4));
         this.state.wolves.forEach((item) => dot(item.row, item.col, MINIMAP_COLORS.wolf, 1.5));

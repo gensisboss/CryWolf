@@ -222,11 +222,12 @@ buildPrefab('UIEditor', [
     ] },
     { name: 'BottomContainer', width: 430, height: 150, x: 0, y: -288, children: [
         { name: 'EditorTabs', sprite: 'ui-bar-dark', width: 398, height: 34, x: 0, y: 56, children: [
-            { name: 'Tab-erase', text: '擦除', width: 58, height: 28, x: -165, fontSize: 13, bold: true },
-            { name: 'Tab-sheep', text: '小羊', width: 58, height: 28, x: -99, fontSize: 13, bold: true },
-            { name: 'Tab-wolf', text: '狼', width: 58, height: 28, x: -33, fontSize: 13, bold: true },
-            { name: 'Tab-village', text: '羊村', width: 58, height: 28, x: 33, fontSize: 13, bold: true },
-            { name: 'Tab-obstacle', text: '障碍', width: 58, height: 28, x: 99, fontSize: 13, bold: true },
+            { name: 'Tab-erase', text: '擦除', width: 58, height: 28, x: -165, fontSize: 13, bold: true, active: false },
+            { name: 'Tab-sheep', text: '小羊', width: 58, height: 28, x: -165, fontSize: 13, bold: true },
+            { name: 'Tab-wolf', text: '狼', width: 58, height: 28, x: -99, fontSize: 13, bold: true },
+            { name: 'Tab-village', text: '羊村', width: 58, height: 28, x: -33, fontSize: 13, bold: true },
+            { name: 'Tab-obstacle', text: '障碍', width: 58, height: 28, x: 33, fontSize: 13, bold: true },
+            { name: 'Tab-box', text: '箱子', width: 58, height: 28, x: 99, fontSize: 13, bold: true },
             { name: 'Tab-trap', text: '陷阱', width: 58, height: 28, x: 165, fontSize: 13, bold: true },
         ] },
         { name: 'Palette', width: 398, height: 62, x: 0, y: 3, children: [0, 1, 2, 3, 4].map((i) => sprite(`Sheep-${i + 1}`, i ? `sheep-${i + 1}` : 'sheep', 42, 42, -120 + i * 60, 0)) },

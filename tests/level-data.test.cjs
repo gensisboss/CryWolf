@@ -47,7 +47,7 @@ test('campaign size and density rise after levels 20 and 30', () => {
         assert.ok(entry.map.length >= 9 && entry.map[0].length >= 9);
         assert.ok(countKind(entry, 10, 19) >= 3);
         assert.ok(countKind(entry, 20, 29) >= 2);
-        assert.ok(countKind(entry, 30, 39) >= 8);
+        assert.ok(countKind(entry, 30, 39) + countKind(entry, 60, 69) >= 8);
         assert.ok(countKind(entry, 40, 49) >= 3);
     });
 });

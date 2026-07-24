@@ -16,6 +16,7 @@ import {
     view,
 } from 'cc';
 import {
+    BOX_IDS,
     OBSTACLE_IDS,
     SHEEP_IDS,
     TRAP_IDS,
@@ -72,6 +73,7 @@ const EDITOR_GROUPS: EditorGroup[] = [
     { key: 'wolf', label: '狼', tools: WOLF_IDS.slice(0, 5).map((id, index) => ({ label: `狼${index + 1}`, id })) },
     { key: 'village', label: '羊村', tools: VILLAGE_IDS.slice(0, 4).map((id, index) => ({ label: `羊村${index + 1}`, id })) },
     { key: 'obstacle', label: '障碍', tools: OBSTACLE_IDS.slice(0, 4).map((id, index) => ({ label: `障碍${index + 1}`, id })) },
+    { key: 'box', label: '箱子', tools: BOX_IDS.slice(0, 4).map((id, index) => ({ label: `箱子${index + 1}`, id })) },
     { key: 'trap', label: '陷阱', tools: TRAP_IDS.slice(0, 4).map((id, index) => ({ label: `陷阱${index + 1}`, id })) },
 ];
 
@@ -128,7 +130,6 @@ export class GameApp extends Component {
     private editorRows = 6;
     private editorCols = 6;
     private editorGoal = 1;
-    private editorMoveObstacle: 0 | 1 = 0;
     private editorMap = createEmptyMap(6, 6);
     private selectedEditorGroup = 'sheep';
     private selectedEditorId: number = SHEEP_IDS[0];
@@ -220,7 +221,6 @@ export class GameApp extends Component {
         this.editorRows = saved.map.length;
         this.editorCols = saved.map[0]?.length ?? 1;
         this.editorGoal = saved.goal;
-        this.editorMoveObstacle = saved.moveObstacle;
     }
 
     private showBootError(detail: string): void {
@@ -610,7 +610,7 @@ export class GameApp extends Component {
         this.requireNode(top, 'GoalValue').getComponent(Label)!.string = `逃离 ${this.editorGoal}`;
         this.requireNode(top, 'RowsValue').getComponent(Label)!.string = `行 ${this.editorRows}`;
         this.requireNode(top, 'ColsValue').getComponent(Label)!.string = `列 ${this.editorCols}`;
-        this.requireLabel(this.requireNode(top, 'MoveObstacleToggle')).string = this.editorMoveObstacle ? '障碍 开' : '障碍 关';
+        this.requireNode(top, 'MoveObstacleToggle').active = false;
         bindButton(this.requireNode(top, 'GoalMinus'), () => this.changeEditorGoal(-1));
         bindButton(this.requireNode(top, 'GoalPlus'), () => this.changeEditorGoal(1));
         bindButton(this.requireNode(top, 'RowsMinus'), () => this.changeEditorSize(-1, 0));
@@ -618,10 +618,6 @@ export class GameApp extends Component {
         bindButton(this.requireNode(top, 'ColsMinus'), () => this.changeEditorSize(0, -1));
         bindButton(this.requireNode(top, 'ColsPlus'), () => this.changeEditorSize(0, 1));
         bindButton(this.requireNode(top, 'ResizeMap'), () => this.updateEditorMessage());
-        bindButton(this.requireNode(top, 'MoveObstacleToggle'), () => {
-            this.editorMoveObstacle = this.editorMoveObstacle ? 0 : 1;
-            this.scheduleEditorScreenRefresh();
-        });
         bindButton(this.requireNode(top, 'ClearButton'), () => this.clearEditor());
         bindButton(this.requireNode(top, 'PlayButton'), () => void this.playEditorLevel());
         bindButton(this.requireNode(top, 'SaveButton'), () => void this.saveEditorLevel());
@@ -683,7 +679,7 @@ export class GameApp extends Component {
         this.board.render(createInitialState(buildLevel(
             this.editorMap,
             this.editorGoal,
-            this.editorMoveObstacle,
+            0,
             '自定义关卡',
         )));
     }
@@ -750,7 +746,7 @@ export class GameApp extends Component {
     }
 
     private buildEditorLevel(): LevelDefinition {
-        return buildLevel(this.editorMap, this.editorGoal, this.editorMoveObstacle, '自定义关卡');
+        return buildLevel(this.editorMap, this.editorGoal, 0, '自定义关卡');
     }
 
     private async playEditorLevel(): Promise<void> {

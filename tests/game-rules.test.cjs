@@ -31,28 +31,28 @@ test('front-to-back movement lets the front sheep escape while the rear sheep oc
     ]);
 });
 
-test('fixed obstacles block movement and moving-obstacle levels move the obstacle in the same turn', () => {
+test('fixed obstacles block movement and boxes move in the same turn', () => {
     const fixed = resolveTurn(createInitialState(level([[10, 0, 30, 0]], 1, 0)), 'right');
-    const moving = resolveTurn(createInitialState(level([[10, 0, 30, 0]], 1, 1)), 'right');
+    const moving = resolveTurn(createInitialState(level([[10, 0, 60, 0]], 1, 0)), 'right');
 
     assert.equal(fixed.state.sheep[0].col, 1);
     assert.equal(fixed.state.obstacles[0].col, 2);
     assert.equal(moving.state.sheep[0].col, 2);
-    assert.equal(moving.state.obstacles[0].col, 3);
+    assert.equal(moving.state.boxes[0].col, 3);
 });
 
-test('characters use a moving obstacle landing cell instead of its stale source cell', () => {
+test('characters use a box landing cell instead of its stale source cell', () => {
     const result = resolveTurn(createInitialState(level([
-        [10, 0, 30, 0, 0],
-        [20, 0, 30, 0, 0],
-    ], 1, 1)), 'right', () => 0);
+        [10, 0, 60, 0, 0],
+        [20, 0, 61, 0, 0],
+    ])), 'right', () => 0);
 
-    assert.deepEqual(result.state.obstacles.map(({ row, col }) => ({ row, col })), [
+    assert.deepEqual(result.state.boxes.map(({ row, col }) => ({ row, col })), [
         { row: 0, col: 4 },
         { row: 1, col: 4 },
     ]);
     assert.deepEqual(
-        result.movements.filter(({ kind }) => kind !== 'obstacle').map(({ kind, to }) => ({ kind, ...to })),
+        result.movements.filter(({ kind }) => kind !== 'box').map(({ kind, to }) => ({ kind, ...to })),
         [
             { kind: 'sheep', row: 0, col: 3 },
             { kind: 'wolf', row: 1, col: 3 },

@@ -35,6 +35,7 @@ export function cloneGameState(state: GameState): GameState {
         sheep: state.sheep.map(cloneEntity),
         wolves: state.wolves.map(cloneEntity),
         obstacles: state.obstacles.map(cloneEntity),
+        boxes: state.boxes.map(cloneEntity),
         villages: state.villages.map(cloneStaticEntity),
         traps: state.traps.map(cloneStaticEntity),
     };
@@ -46,6 +47,7 @@ export function createInitialState(level: LevelDefinition): GameState {
     const sheep: Entity[] = [];
     const wolves: Entity[] = [];
     const obstacles: Entity[] = [];
+    const boxes: Entity[] = [];
     const villages: StaticEntity[] = [];
     const traps: StaticEntity[] = [];
     let sequence = 0;
@@ -71,6 +73,9 @@ export function createInitialState(level: LevelDefinition): GameState {
                 case 'obstacle':
                     obstacles.push(createEntity(id, row, col, 'obstacle'));
                     break;
+                case 'box':
+                    boxes.push(createEntity(id, row, col, 'box'));
+                    break;
                 case 'village':
                     villages.push({ id, row, col });
                     break;
@@ -95,6 +100,7 @@ export function createInitialState(level: LevelDefinition): GameState {
         sheep,
         wolves,
         obstacles,
+        boxes,
         villages,
         traps,
         status: 'playing',
@@ -128,12 +134,13 @@ export function resolveTurn(
 
     const [dr, dc] = DIRECTION_VECTORS[direction];
     const obstacleCells = new Set(source.obstacles.map((entity) => positionKey(entity.row, entity.col)));
+    const boxCells = new Set(source.boxes.map((entity) => positionKey(entity.row, entity.col)));
     const villageCells = new Set(source.villages.map((entity) => positionKey(entity.row, entity.col)));
     const trapCells = new Set(source.traps.map((entity) => positionKey(entity.row, entity.col)));
     const moving = [
         ...source.sheep.map(cloneEntity),
         ...source.wolves.map(cloneEntity),
-        ...(source.level.moveObstacle === 1 ? source.obstacles.map(cloneEntity) : []),
+        ...source.boxes.map(cloneEntity),
     ];
 
     moving.sort((left, right) => {
@@ -149,8 +156,8 @@ export function resolveTurn(
         const from = { row: entity.row, col: entity.col };
         let row = entity.row;
         let col = entity.col;
-        if (entity.kind === 'obstacle' && source.level.moveObstacle === 1) {
-            obstacleCells.delete(positionKey(row, col));
+        if (entity.kind === 'box') {
+            boxCells.delete(positionKey(row, col));
         }
 
         while (true) {
@@ -159,9 +166,9 @@ export function resolveTurn(
             if (nextRow < 0 || nextRow >= source.rows || nextCol < 0 || nextCol >= source.cols) break;
 
             const key = positionKey(nextRow, nextCol);
-            const blocked = entity.kind === 'obstacle'
-                ? villageCells.has(key) || trapCells.has(key)
-                : obstacleCells.has(key) || (entity.kind === 'wolf' && villageCells.has(key));
+            const blocked = entity.kind === 'box'
+                ? obstacleCells.has(key) || villageCells.has(key) || trapCells.has(key)
+                : obstacleCells.has(key) || boxCells.has(key) || (entity.kind === 'wolf' && villageCells.has(key));
             if (blocked || occupied.has(key)) break;
 
             row = nextRow;
@@ -174,8 +181,8 @@ export function resolveTurn(
 
         entity.row = row;
         entity.col = col;
-        if (entity.kind === 'obstacle') {
-            obstacleCells.add(positionKey(row, col));
+        if (entity.kind === 'box') {
+            boxCells.add(positionKey(row, col));
         }
         occupied.add(positionKey(row, col));
         movements.push({
@@ -189,9 +196,7 @@ export function resolveTurn(
 
     const sheepAtLanding = moving.filter((entity) => entity.kind === 'sheep').map(cloneEntity);
     const wolvesAtLanding = moving.filter((entity) => entity.kind === 'wolf').map(cloneEntity);
-    const obstacles = source.level.moveObstacle === 1
-        ? moving.filter((entity) => entity.kind === 'obstacle').map(cloneEntity)
-        : source.obstacles.map(cloneEntity);
+    const boxes = moving.filter((entity) => entity.kind === 'box').map(cloneEntity);
     const sheep: Entity[] = [];
     const wolves: Entity[] = [];
     const removedTrapCells = new Set<string>();
@@ -250,7 +255,8 @@ export function resolveTurn(
         escapedSheep,
         sheep: survivingSheep,
         wolves,
-        obstacles,
+        obstacles: source.obstacles.map(cloneEntity),
+        boxes,
         traps: source.traps.filter((trap) => !removedTrapCells.has(positionKey(trap.row, trap.col))).map(cloneStaticEntity),
         status: getStatus(escapedSheep, source.goal, survivingSheep.length),
     };

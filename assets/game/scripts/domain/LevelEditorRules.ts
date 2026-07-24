@@ -1,4 +1,4 @@
-import { SHEEP_IDS } from './EntityCatalog';
+import { BOX_IDS, OBSTACLE_IDS, SHEEP_IDS } from './EntityCatalog';
 import { LevelDefinition } from './GameTypes';
 
 export const MIN_EDITOR_SIZE = 1;
@@ -44,6 +44,15 @@ export function countSheep(map: number[][]): number {
     return map.flat().filter((id) => ids.has(id)).length;
 }
 
+const obstacleToBox = new Map<number, number>(
+    OBSTACLE_IDS.map((id, index) => [id, BOX_IDS[index]]),
+);
+
+function migrateLegacyMovingObstacles(map: number[][], moveObstacle: number | boolean): number[][] {
+    if (Number(moveObstacle) !== 1) return cloneMap(map);
+    return map.map((row) => row.map((id) => obstacleToBox.get(id) ?? id));
+}
+
 export function buildLevel(
     map: number[][],
     goal = 1,
@@ -55,8 +64,8 @@ export function buildLevel(
     return {
         ...(normalizedTitle ? { title: normalizedTitle } : {}),
         goal: Math.max(1, Math.floor(Number(goal) || 1)),
-        moveObstacle: Number(moveObstacle) === 1 ? 1 : 0,
-        map: cloneMap(limitedMap),
+        moveObstacle: 0,
+        map: migrateLegacyMovingObstacles(limitedMap, moveObstacle),
     };
 }
 
@@ -98,7 +107,7 @@ export function exportLevelJson(level: LevelDefinition): string {
     return JSON.stringify({
         ...(level.title ? { title: level.title.trim() } : {}),
         goal: Math.max(1, Math.floor(Number(level.goal) || 1)),
-        moveObstacle: Number(level.moveObstacle) === 1 ? 1 : 0,
+        moveObstacle: 0,
         map: cloneMap(level.map),
     }, null, 2);
 }

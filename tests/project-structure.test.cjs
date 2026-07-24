@@ -63,11 +63,14 @@ test('project uses a 1080 x 1920 adaptive portrait design resolution', () => {
 test('all runtime JSON and art resources were imported into the resources bundle', () => {
     const artDirectory = path.join(projectRoot, 'assets', 'resources', 'art');
     const pngFiles = fs.readdirSync(artDirectory).filter((name) => name.endsWith('.png'));
-    assert.equal(pngFiles.length, 57);
+    assert.equal(pngFiles.length, 61);
     assert.ok(pngFiles.includes('button-undo.png'));
     for (let index = 1; index <= 12; index += 1) {
         assert.ok(pngFiles.includes(`grass-tile-${index}.png`));
     }
+    ['box', 'box-2', 'box-3', 'box-4'].forEach((name) => {
+        assert.ok(pngFiles.includes(`${name}.png`), `${name} should be available for movable boxes`);
+    });
     ['ui-panel-gold', 'ui-panel-green', 'ui-button-gold', 'ui-button-green', 'ui-status-gold', 'ui-status-green', 'ui-bar-dark', 'ui-dialog', 'ui-modal', 'ui-overlay'].forEach((name) => {
         assert.ok(pngFiles.includes(`${name}.png`), `${name} should have a dedicated bitmap asset`);
     });
@@ -105,6 +108,8 @@ test('editor clears any occupied tile without an eraser tool or full board rebui
     assert.match(boardView, /public updateEditorCell\(/);
     const eraseTab = editorPrefab.find((entry) => entry?._name === 'Tab-erase');
     assert.equal(eraseTab?._active, false);
+    const boxTab = editorPrefab.find((entry) => entry?._name === 'Tab-box');
+    assert.equal(boxTab?._active, true);
 });
 
 test('editor tool switching preserves the board instance and only refreshes the palette', () => {
@@ -255,8 +260,8 @@ test('every level entry uses the cloud transition and static terrain keeps a cel
     assert.match(gameApp, /private async resetLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async startMainGame\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
-    assert.match(boardView, /kind === 'trap' \|\| kind === 'village' \|\| \(kind === 'obstacle' && moveObstacle === 0\)/);
-    assert.match(boardView, /obstacle\?\.id \?\? trap\?\.id \?\? village\?\.id \?\? 0/);
+    assert.match(boardView, /kind === 'trap' \|\| kind === 'village' \|\| kind === 'obstacle'/);
+    assert.match(boardView, /obstacle\?\.id \?\? box\?\.id \?\? trap\?\.id \?\? village\?\.id \?\? 0/);
     assert.doesNotMatch(boardView, /const tileId = state\.level\.map\[row\]\?\.\[col\] \?\? 0/);
 });
 

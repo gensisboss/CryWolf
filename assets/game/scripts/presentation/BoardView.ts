@@ -112,6 +112,7 @@ export class BoardView {
         this.boardPanel = boardPanel;
 
         const obstacleByCell = new Map(state.obstacles.map((entity) => [this.positionKey(entity.row, entity.col), entity]));
+        const boxByCell = new Map(state.boxes.map((entity) => [this.positionKey(entity.row, entity.col), entity]));
         const trapByCell = new Map(state.traps.map((entity) => [this.positionKey(entity.row, entity.col), entity]));
         const villageByCell = new Map(state.villages.map((entity) => [this.positionKey(entity.row, entity.col), entity]));
 
@@ -119,21 +120,22 @@ export class BoardView {
             for (let col = 0; col < state.cols; col += 1) {
                 const key = this.positionKey(row, col);
                 const obstacle = obstacleByCell.get(key);
+                const box = boxByCell.get(key);
                 const trap = trapByCell.get(key);
                 const village = villageByCell.get(key);
                 const position = this.positionFor(row, col, state);
                 const tileId = this.options.editorMode
                     ? state.level.map[row]?.[col] ?? 0
-                    : obstacle?.id ?? trap?.id ?? village?.id ?? 0;
+                    : obstacle?.id ?? box?.id ?? trap?.id ?? village?.id ?? 0;
                 const kind = getTileKind(tileId);
-                const fill = this.cellFill(row, col, tileId, state.level.moveObstacle);
+                const fill = this.cellFill(row, col, tileId);
                 const cell = createPanel(boardPanel, `Cell-${row}-${col}`, this.cellSize, this.cellSize, position.x, position.y, {
                     fill,
                     stroke: new Color(229, 231, 165, 76),
                     lineWidth: 1,
                     radius: 1,
                 });
-                if (this.usesStaticCellBackground(kind, state.level.moveObstacle)) {
+                if (this.usesStaticCellBackground(kind)) {
                     this.decorateCell(cell, row, col, fill);
                 } else {
                     this.createGrassTile(cell, row, col);
@@ -157,7 +159,7 @@ export class BoardView {
         }
 
         if (!this.options.editorMode) {
-            for (const entity of [...state.obstacles, ...state.sheep, ...state.wolves]) {
+            for (const entity of [...state.obstacles, ...state.boxes, ...state.sheep, ...state.wolves]) {
                 this.createActor(boardPanel, entity, state);
             }
         }
@@ -261,6 +263,7 @@ export class BoardView {
                 sheep: moveEntities(state.sheep, progress),
                 wolves: moveEntities(state.wolves, progress),
                 obstacles: moveEntities(state.obstacles, progress),
+                boxes: moveEntities(state.boxes, progress),
             };
             this.viewport = viewport;
             this.visualViewport = visualOrigin;
@@ -280,7 +283,7 @@ export class BoardView {
     }
 
     private updateRenderedPositions(state: GameState): void {
-        for (const entity of [...state.obstacles, ...state.sheep, ...state.wolves]) {
+        for (const entity of [...state.obstacles, ...state.boxes, ...state.sheep, ...state.wolves]) {
             this.actorNodes.get(entity.key)?.setPosition(this.positionFor(entity.row, entity.col, state));
         }
         this.updateCameraPosition();
@@ -330,7 +333,7 @@ export class BoardView {
     public async animateRestore(target: GameState): Promise<void> {
         if (!this.state) return;
         const targetEntities = new Map(
-            [...target.sheep, ...target.wolves, ...target.obstacles].map((entity) => [entity.key, entity]),
+            [...target.sheep, ...target.wolves, ...target.obstacles, ...target.boxes].map((entity) => [entity.key, entity]),
         );
         const restoredKeys = [...targetEntities.keys()].filter((key) => !this.actorNodes.has(key));
         const moves: Array<Promise<void>> = [];
@@ -376,7 +379,7 @@ export class BoardView {
         if (!cell) return;
         cell.getChildByName('EditorCellArt')?.destroy();
         cell.getChildByName('GrassTile')?.destroy();
-        const fill = this.cellFill(row, col, id, state.level.moveObstacle);
+        const fill = this.cellFill(row, col, id);
         drawPanel(cell, this.cellSize, this.cellSize, {
             fill,
             stroke: new Color(229, 231, 165, 76),
@@ -384,7 +387,7 @@ export class BoardView {
             radius: 1,
         });
         const kind = getTileKind(id);
-        if (this.usesStaticCellBackground(kind, state.level.moveObstacle)) {
+        if (this.usesStaticCellBackground(kind)) {
             this.decorateCell(cell, row, col, fill);
         } else {
             this.createGrassTile(cell, row, col);
@@ -403,26 +406,26 @@ export class BoardView {
         createSprite(cell, 'EditorCellArt', frame, this.cellSize * 0.9, this.cellSize * 0.9);
     }
 
-    private cellFill(row: number, col: number, id: number, moveObstacle: number): Color {
+    private cellFill(row: number, col: number, id: number): Color {
         const grassVariant = (row + col) % 2 === 0
             ? new Color(126, 181, 91, 250)
             : new Color(116, 170, 82, 250);
         const kind = getTileKind(id);
-        if (kind === 'obstacle' && moveObstacle === 0) return new Color(116, 88, 49, 250);
+        if (kind === 'obstacle') return new Color(116, 88, 49, 250);
         if (kind === 'trap') return new Color(155, 76, 61, 250);
         if (kind === 'village') return new Color(155, 135, 73, 250);
         return grassVariant;
     }
 
-    private usesStaticCellBackground(kind: TileKind, moveObstacle: number): boolean {
-        return kind === 'trap' || kind === 'village' || (kind === 'obstacle' && moveObstacle === 0);
+    private usesStaticCellBackground(kind: TileKind): boolean {
+        return kind === 'trap' || kind === 'village' || kind === 'obstacle';
     }
 
     private createActor(parent: Node, entity: Entity, state: GameState): void {
         const frame = this.assets.forTile(entity.id);
         if (!frame) return;
         const position = this.positionFor(entity.row, entity.col, state);
-        const size = entity.kind === 'obstacle' ? this.cellSize * 0.86 : this.cellSize * 0.9;
+        const size = entity.kind === 'obstacle' || entity.kind === 'box' ? this.cellSize * 0.86 : this.cellSize * 0.9;
         const node = createSprite(parent, `Actor-${entity.key}`, frame, size, size, position.x, position.y);
         node.addComponent(UIOpacity);
         this.actorNodes.set(entity.key, node);

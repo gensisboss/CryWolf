@@ -17,7 +17,7 @@ const directions = ['up', 'down', 'left', 'right'];
 
 function stateKey(state) {
     const entities = (items) => items.map((item) => `${item.key}:${item.row},${item.col}`).sort().join('|');
-    return [state.escapedSheep, entities(state.sheep), entities(state.wolves), entities(state.obstacles), state.traps.map((item) => `${item.row},${item.col}`).sort().join('|')].join(';');
+    return [state.escapedSheep, entities(state.sheep), entities(state.wolves), entities(state.obstacles), entities(state.boxes), state.traps.map((item) => `${item.row},${item.col}`).sort().join('|')].join(';');
 }
 
 function solve(level, maxDepth, maxStates = 10000) {
@@ -51,14 +51,14 @@ function createCandidate(levelNumber, rows, cols, sheepCount, obstacleCount, tra
     };
     for (let index = 0; index < sheepCount; index += 1) put(10 + index % 5);
     for (let index = 0; index < sheepCount; index += 1) put(50 + index % 4);
-    for (let index = 0; index < obstacleCount; index += 1) put(30 + index % 4);
+    for (let index = 0; index < obstacleCount; index += 1) put((moving ? 60 : 30) + index % 4);
     for (let index = 0; index < trapCount; index += 1) put(40 + index % 4);
     for (let index = 0; index < wolfCount; index += 1) put(20 + index % 5);
     return {
         title: `第${levelNumber}程`,
         goal: Math.max(1, Math.ceil(sheepCount / 2)),
         map,
-        moveObstacle: moving ? 1 : 0,
+        moveObstacle: 0,
     };
 }
 

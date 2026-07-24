@@ -44,6 +44,10 @@ const FILES = {
     obstacle2: 'obstacle-2',
     obstacle3: 'obstacle-3',
     obstacle4: 'obstacle-4',
+    box: 'box',
+    box2: 'box-2',
+    box3: 'box-3',
+    box4: 'box-4',
     trap: 'trap',
     trap2: 'trap-2',
     trap3: 'trap-3',
@@ -116,6 +120,7 @@ export class AssetCatalog {
             wolf: ['wolf', 'wolf2', 'wolf3', 'wolf4', 'wolf5'],
             village: ['village', 'village2', 'village3', 'village4'],
             obstacle: ['obstacle', 'obstacle2', 'obstacle3', 'obstacle4'],
+            box: ['box', 'box2', 'box3', 'box4'],
             trap: ['trap', 'trap2', 'trap3', 'trap4'],
         };
         const available = variants[kind];
