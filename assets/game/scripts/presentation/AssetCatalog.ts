@@ -14,6 +14,18 @@ const FILES = {
     replayButton: 'button-replay',
     settingButton: 'button-setting',
     riverTile: 'river-tile',
+    grass1: 'grass-tile-1',
+    grass2: 'grass-tile-2',
+    grass3: 'grass-tile-3',
+    grass4: 'grass-tile-4',
+    grass5: 'grass-tile-5',
+    grass6: 'grass-tile-6',
+    grass7: 'grass-tile-7',
+    grass8: 'grass-tile-8',
+    grass9: 'grass-tile-9',
+    grass10: 'grass-tile-10',
+    grass11: 'grass-tile-11',
+    grass12: 'grass-tile-12',
     sheep: 'sheep',
     sheep2: 'sheep-2',
     sheep3: 'sheep-3',
@@ -40,6 +52,31 @@ const FILES = {
 
 export type AssetKey = keyof typeof FILES;
 
+const GRASS_TILE_KEYS = [
+    'grass1',
+    'grass2',
+    'grass3',
+    'grass4',
+    'grass5',
+    'grass6',
+    'grass7',
+    'grass8',
+    'grass9',
+    'grass10',
+    'grass11',
+    'grass12',
+] as const;
+
+function stableGrassIndex(row: number, col: number): number {
+    let hash = (row * 73428767 + col * 91227153 + row * col * 4231 + 0x9e3779b9) >>> 0;
+    hash ^= hash >>> 16;
+    hash = Math.imul(hash, 2246822519);
+    hash ^= hash >>> 13;
+    hash = Math.imul(hash, 3266489917);
+    hash ^= hash >>> 16;
+    return (hash >>> 0) % GRASS_TILE_KEYS.length;
+}
+
 function loadSpriteFrame(file: string): Promise<SpriteFrame> {
     return new Promise((resolve, reject) => {
         resources.load(`art/${file}/spriteFrame`, SpriteFrame, (error, frame) => {
@@ -65,6 +102,10 @@ export class AssetCatalog {
         const frame = this.frames.get(key);
         if (!frame) throw new Error(`Sprite frame not loaded: ${key}`);
         return frame;
+    }
+
+    public grassForCell(row: number, col: number): SpriteFrame {
+        return this.get(GRASS_TILE_KEYS[stableGrassIndex(row, col)]);
     }
 
     public forTile(id: number): SpriteFrame | null {

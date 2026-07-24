@@ -125,6 +125,7 @@ export class BoardView {
                 const tileId = this.options.editorMode
                     ? state.level.map[row]?.[col] ?? 0
                     : obstacle?.id ?? trap?.id ?? village?.id ?? 0;
+                const kind = getTileKind(tileId);
                 const fill = this.cellFill(row, col, tileId, state.level.moveObstacle);
                 const cell = createPanel(boardPanel, `Cell-${row}-${col}`, this.cellSize, this.cellSize, position.x, position.y, {
                     fill,
@@ -132,7 +133,11 @@ export class BoardView {
                     lineWidth: 1,
                     radius: 1,
                 });
-                this.decorateCell(cell, row, col, fill);
+                if (kind === 'obstacle' && state.level.moveObstacle === 0) {
+                    this.decorateCell(cell, row, col, fill);
+                } else {
+                    this.createGrassTile(cell, row, col);
+                }
                 this.cellNodes.set(key, cell);
                 if (this.options.onCellPress) {
                     cell.on(Node.EventType.TOUCH_END, (event: EventTouch) => {
@@ -370,6 +375,7 @@ export class BoardView {
         const cell = this.cellNodes.get(this.positionKey(row, col));
         if (!cell) return;
         cell.getChildByName('EditorCellArt')?.destroy();
+        cell.getChildByName('GrassTile')?.destroy();
         const fill = this.cellFill(row, col, id, state.level.moveObstacle);
         drawPanel(cell, this.cellSize, this.cellSize, {
             fill,
@@ -377,8 +383,18 @@ export class BoardView {
             lineWidth: 1,
             radius: 1,
         });
-        this.decorateCell(cell, row, col, fill);
+        const kind = getTileKind(id);
+        if (kind === 'obstacle' && state.level.moveObstacle === 0) {
+            this.decorateCell(cell, row, col, fill);
+        } else {
+            this.createGrassTile(cell, row, col);
+        }
         if (id !== 0) this.createEditorCellArt(cell, id);
+    }
+
+    private createGrassTile(cell: Node, row: number, col: number): void {
+        const size = Math.max(1, this.cellSize - 2);
+        createSprite(cell, 'GrassTile', this.assets.grassForCell(row, col), size, size);
     }
 
     private createEditorCellArt(cell: Node, id: number): void {

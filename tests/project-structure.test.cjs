@@ -63,8 +63,11 @@ test('project uses a 1080 x 1920 adaptive portrait design resolution', () => {
 test('all runtime JSON and art resources were imported into the resources bundle', () => {
     const artDirectory = path.join(projectRoot, 'assets', 'resources', 'art');
     const pngFiles = fs.readdirSync(artDirectory).filter((name) => name.endsWith('.png'));
-    assert.equal(pngFiles.length, 45);
+    assert.equal(pngFiles.length, 57);
     assert.ok(pngFiles.includes('button-undo.png'));
+    for (let index = 1; index <= 12; index += 1) {
+        assert.ok(pngFiles.includes(`grass-tile-${index}.png`));
+    }
     ['ui-panel-gold', 'ui-panel-green', 'ui-button-gold', 'ui-button-green', 'ui-status-gold', 'ui-status-green', 'ui-bar-dark', 'ui-dialog', 'ui-modal', 'ui-overlay'].forEach((name) => {
         assert.ok(pngFiles.includes(`${name}.png`), `${name} should have a dedicated bitmap asset`);
     });
