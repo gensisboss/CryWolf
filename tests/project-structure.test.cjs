@@ -243,7 +243,7 @@ test('loading transition is globally callable with queued async operations', () 
     assert.ok((gameApp.match(/LoadingTransition\.run\(async \(\) =>/g) ?? []).length >= 2);
 });
 
-test('every level entry uses the cloud transition and only fixed obstacles have a cell background', () => {
+test('every level entry uses the cloud transition and static terrain keeps a cell background', () => {
     const gameApp = fs.readFileSync(
         path.join(projectRoot, 'assets', 'game', 'scripts', 'ui', 'GameApp.ts'),
         'utf8',
@@ -255,7 +255,7 @@ test('every level entry uses the cloud transition and only fixed obstacles have 
     assert.match(gameApp, /private async resetLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async startMainGame\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
     assert.match(gameApp, /private async playEditorLevel\(\): Promise<void>[\s\S]*await this\.transitionToLevel\(this\.currentLevel\)/);
-    assert.match(boardView, /kind === 'obstacle' && moveObstacle === 0/);
+    assert.match(boardView, /kind === 'trap' \|\| kind === 'village' \|\| \(kind === 'obstacle' && moveObstacle === 0\)/);
     assert.match(boardView, /obstacle\?\.id \?\? trap\?\.id \?\? village\?\.id \?\? 0/);
     assert.doesNotMatch(boardView, /const tileId = state\.level\.map\[row\]\?\.\[col\] \?\? 0/);
 });

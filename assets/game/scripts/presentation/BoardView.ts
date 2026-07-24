@@ -10,7 +10,7 @@ import {
     Vec2,
     Vec3,
 } from 'cc';
-import { getTileKind } from '../domain/EntityCatalog';
+import { getTileKind, type TileKind } from '../domain/EntityCatalog';
 import { Direction, Entity, GameState, TurnResolution } from '../domain/GameTypes';
 import { AssetCatalog } from './AssetCatalog';
 import { createPanel, createSprite, createUiNode, drawPanel } from '../ui/UiFactory';
@@ -133,7 +133,7 @@ export class BoardView {
                     lineWidth: 1,
                     radius: 1,
                 });
-                if (kind === 'obstacle' && state.level.moveObstacle === 0) {
+                if (this.usesStaticCellBackground(kind, state.level.moveObstacle)) {
                     this.decorateCell(cell, row, col, fill);
                 } else {
                     this.createGrassTile(cell, row, col);
@@ -384,7 +384,7 @@ export class BoardView {
             radius: 1,
         });
         const kind = getTileKind(id);
-        if (kind === 'obstacle' && state.level.moveObstacle === 0) {
+        if (this.usesStaticCellBackground(kind, state.level.moveObstacle)) {
             this.decorateCell(cell, row, col, fill);
         } else {
             this.createGrassTile(cell, row, col);
@@ -412,6 +412,10 @@ export class BoardView {
         if (kind === 'trap') return new Color(155, 76, 61, 250);
         if (kind === 'village') return new Color(155, 135, 73, 250);
         return grassVariant;
+    }
+
+    private usesStaticCellBackground(kind: TileKind, moveObstacle: number): boolean {
+        return kind === 'trap' || kind === 'village' || (kind === 'obstacle' && moveObstacle === 0);
     }
 
     private createActor(parent: Node, entity: Entity, state: GameState): void {
